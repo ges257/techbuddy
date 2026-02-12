@@ -176,3 +176,26 @@ def test_system_prompt_has_proactive_troubleshooting():
     assert "PROACTIVE TROUBLESHOOTING" in prompt
     assert "offer to look at their screen" in prompt.lower()
     assert "verify_screen_step" in prompt or "verify it worked" in prompt.lower()
+
+def test_system_prompt_has_system_health():
+    prompt = _build_system_prompt()
+    assert "SYSTEM HEALTH" in prompt
+    assert "check_system_health" in prompt
+    assert "fix_frozen_program" in prompt
+
+def test_execute_tool_check_system_health():
+    result = execute_tool("check_system_health", {})
+    assert isinstance(result, str)
+
+def test_execute_tool_fix_frozen_program():
+    result = execute_tool("fix_frozen_program", {"program_name": "notepad"})
+    assert isinstance(result, str)
+
+def test_execute_tool_check_internet():
+    result = execute_tool("check_internet", {})
+    assert isinstance(result, str)
+
+def test_execute_tool_smart_save_document():
+    result = execute_tool("smart_save_document", {"content": "test", "title": "Test"})
+    assert isinstance(result, str)
+    assert "saved" in result.lower()

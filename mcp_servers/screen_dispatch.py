@@ -10,6 +10,7 @@ Tier 4: Claude Vision (text instructions) — slow fallback, ~90% reliable
 On WSL2/Linux: Tiers 1-2 are stubbed (Windows-only). Tier 3 (filesystem/web)
 and Tier 4 (Vision) work everywhere.
 """
+import json
 import os
 import re
 import sys
@@ -703,6 +704,280 @@ def _troubleshoot_printer_generic() -> str:
     return "\n".join(report_lines)
 
 
+# ---------------------------------------------------------------------------
+# System Troubleshooting — Terminal-based diagnostics (PowerShell on Windows)
+# ---------------------------------------------------------------------------
+
+
+def _run_powershell(script: str, timeout: int = 15) -> str | None:
+    """Run a PowerShell command and return stdout, or None on failure."""
+    try:
+        result = subprocess.run(
+            ["powershell", "-NoProfile", "-Command", script],
+            capture_output=True, text=True, timeout=timeout,
+        )
+        if result.returncode == 0 and result.stdout.strip():
+            return result.stdout.strip()
+    except (FileNotFoundError, subprocess.TimeoutExpired, Exception):
+        pass
+    return None
+
+
+def check_system_health() -> str:
+    """Check why the computer is slow or acting up. Shows memory usage,
+    hard drive space, and which programs are using the most resources.
+    Use when the user says 'my computer is slow', 'everything is freezing',
+    or 'am I running out of space?'
+    """
+    if not IS_WINDOWS:
+        return (
+            "I can't check your computer's health from here, but here are common fixes:\n"
+            "  1. Close programs you're not using (they use memory)\n"
+            "  2. Restart your computer — this fixes most slowness\n"
+            "  3. Make sure your hard drive isn't full — delete old files you don't need\n"
+            "Would you like help with any of these?"
+        )
+
+    report = ["Here's how your computer is doing:\n"]
+
+    # 1. Memory usage
+    mem_script = (
+        "Get-CimInstance Win32_OperatingSystem | "
+        "Select-Object FreePhysicalMemory, TotalVisibleMemorySize | "
+        "ConvertTo-Json"
+    )
+    mem_out = _run_powershell(mem_script)
+    if mem_out:
+        try:
+            data = json.loads(mem_out)
+            total_kb = int(data["TotalVisibleMemorySize"])
+            free_kb = int(data["FreePhysicalMemory"])
+            total_gb = round(total_kb / 1048576, 1)
+            used_gb = round((total_kb - free_kb) / 1048576, 1)
+            pct = round((total_kb - free_kb) / total_kb * 100)
+            report.append(f"MEMORY: Using {used_gb} of {total_gb} GB ({pct}% full)")
+            if pct > 85:
+                report.append("  ⚠ Memory is very high — closing some programs would help!")
+            elif pct > 70:
+                report.append("  Getting a bit full — close programs you're not using.")
+            else:
+                report.append("  Looks good!")
+        except (json.JSONDecodeError, KeyError, ValueError):
+            report.append("MEMORY: I couldn't check memory usage.")
+    else:
+        report.append("MEMORY: I couldn't check memory usage.")
+
+    # 2. Disk space
+    disk_script = (
+        "Get-PSDrive C | Select-Object Used, Free | ConvertTo-Json"
+    )
+    disk_out = _run_powershell(disk_script)
+    if disk_out:
+        try:
+            data = json.loads(disk_out)
+            used_bytes = int(data["Used"])
+            free_bytes = int(data["Free"])
+            total_bytes = used_bytes + free_bytes
+            free_gb = round(free_bytes / 1073741824, 1)
+            pct_used = round(used_bytes / total_bytes * 100)
+            report.append(f"\nHARD DRIVE: {pct_used}% full — {free_gb} GB free")
+            if free_gb < 10:
+                report.append("  ⚠ Running low on space! Delete files you don't need.")
+            elif free_gb < 30:
+                report.append("  Getting a little full — keep an eye on it.")
+            else:
+                report.append("  Plenty of space!")
+        except (json.JSONDecodeError, KeyError, ValueError):
+            report.append("\nHARD DRIVE: I couldn't check disk space.")
+    else:
+        report.append("\nHARD DRIVE: I couldn't check disk space.")
+
+    # 3. Top CPU-hungry programs
+    proc_script = (
+        "Get-Process | Sort-Object -Property WorkingSet64 -Descending | "
+        "Select-Object -First 5 ProcessName, "
+        "@{Name='MemoryMB';Expression={[math]::Round($_.WorkingSet64/1MB)}} | "
+        "ConvertTo-Json"
+    )
+    proc_out = _run_powershell(proc_script)
+    if proc_out:
+        try:
+            procs = json.loads(proc_out)
+            if not isinstance(procs, list):
+                procs = [procs]
+            report.append("\nBIGGEST PROGRAMS RUNNING:")
+            for p in procs:
+                name = p.get("ProcessName", "Unknown")
+                mb = p.get("MemoryMB", 0)
+                report.append(f"  • {name} — using {mb} MB")
+        except (json.JSONDecodeError, KeyError):
+            report.append("\nPROGRAMS: I couldn't list running programs.")
+    else:
+        report.append("\nPROGRAMS: I couldn't list running programs.")
+
+    report.append("\nWould you like me to close any of these programs to free up memory?")
+    return "\n".join(report)
+
+
+def fix_frozen_program(program_name: str, confirm: bool = False) -> str:
+    """Close a program that is frozen or not responding. Use when the user says
+    'Word is frozen', 'my browser won't close', or 'this program is stuck'.
+    IMPORTANT: Always ask the user to confirm before closing — they may lose unsaved work.
+    Call first WITHOUT confirm to see what's running, then WITH confirm=True to actually close it.
+
+    Args:
+        program_name: The name of the program (e.g., 'Word', 'Chrome', 'Notepad')
+        confirm: Set to True to actually close the program. False just checks if it's running.
+    """
+    if not program_name or not program_name.strip():
+        return "Which program is frozen? Tell me its name — like 'Word' or 'Chrome'."
+
+    if not IS_WINDOWS:
+        return (
+            f"I can't close {program_name} from here, but here's what to try:\n"
+            "  1. Right-click the program in the taskbar and pick 'Close window'\n"
+            "  2. Press Ctrl + Alt + Delete, then pick 'Task Manager'\n"
+            "  3. Find the program in the list, click it, and press 'End Task'\n"
+            "Would you like me to walk you through Task Manager?"
+        )
+
+    clean_name = program_name.strip()
+
+    # Map friendly names to process names
+    name_map = {
+        "word": "WINWORD",
+        "excel": "EXCEL",
+        "powerpoint": "POWERPNT",
+        "outlook": "OUTLOOK",
+        "chrome": "chrome",
+        "firefox": "firefox",
+        "edge": "msedge",
+        "notepad": "notepad",
+        "explorer": "explorer",
+        "teams": "Teams",
+    }
+    proc_name = name_map.get(clean_name.lower(), clean_name)
+
+    # Check if it's running
+    check_script = (
+        f"Get-Process -Name '{proc_name}' -ErrorAction SilentlyContinue | "
+        f"Select-Object ProcessName, Id, "
+        f"@{{Name='MemoryMB';Expression={{[math]::Round($_.WorkingSet64/1MB)}}}} | "
+        f"ConvertTo-Json"
+    )
+    check_out = _run_powershell(check_script)
+
+    if not check_out:
+        return f"I don't see {program_name} running on your computer. It might have already closed!"
+
+    try:
+        procs = json.loads(check_out)
+        if not isinstance(procs, list):
+            procs = [procs]
+    except json.JSONDecodeError:
+        return f"I had trouble checking on {program_name}. Try pressing Ctrl+Alt+Delete and using Task Manager."
+
+    total_mb = sum(p.get("MemoryMB", 0) for p in procs)
+    count = len(procs)
+
+    if not confirm:
+        # Just report — Claude will ask for confirmation
+        msg = f"I found {program_name}"
+        if count > 1:
+            msg += f" ({count} windows)"
+        msg += f" using {total_mb} MB of memory.\n\n"
+        msg += "⚠ Closing it will lose any unsaved work in that program.\n"
+        msg += "Would you like me to close it?"
+        return msg
+
+    # Actually kill it
+    kill_script = f"Stop-Process -Name '{proc_name}' -Force -ErrorAction SilentlyContinue"
+    _run_powershell(kill_script, timeout=10)
+
+    return (
+        f"Done! I closed {program_name}. "
+        "If you need to use it again, just open it from the Start menu or your desktop. "
+        "Let me know if anything else is acting up!"
+    )
+
+
+def check_internet() -> str:
+    """Check if the internet is working and diagnose connection problems.
+    Use when the user says 'internet isn't working', 'WiFi is down',
+    'I can't get online', or 'pages won't load'.
+    """
+    if not IS_WINDOWS:
+        return (
+            "I can't check your internet from here, but here's what to try:\n"
+            "  1. Look for the WiFi icon in the bottom-right corner of your screen\n"
+            "  2. If there's an X on it, click it and pick your WiFi network\n"
+            "  3. Try turning WiFi OFF, wait 10 seconds, turn it back ON\n"
+            "  4. If nothing works, unplug your router, wait 30 seconds, plug it back in\n"
+            "Would you like me to walk you through any of these?"
+        )
+
+    report = []
+
+    # 1. Ping test — is internet reachable?
+    ping_script = "Test-Connection -ComputerName 8.8.8.8 -Count 2 -Quiet"
+    ping_out = _run_powershell(ping_script, timeout=20)
+    is_connected = ping_out and ping_out.strip().lower() == "true"
+
+    if is_connected:
+        report.append("INTERNET: Your internet is working!")
+    else:
+        report.append("INTERNET: ⚠ I can't reach the internet right now.")
+
+    # 2. WiFi info
+    wifi_script = "netsh wlan show interfaces"
+    wifi_out = _run_powershell(wifi_script)
+    if wifi_out:
+        # Parse key fields
+        ssid = ""
+        signal = ""
+        state = ""
+        for line in wifi_out.split("\n"):
+            line = line.strip()
+            if line.startswith("SSID") and "BSSID" not in line:
+                ssid = line.split(":", 1)[1].strip() if ":" in line else ""
+            elif line.startswith("Signal"):
+                signal = line.split(":", 1)[1].strip() if ":" in line else ""
+            elif line.startswith("State"):
+                state = line.split(":", 1)[1].strip() if ":" in line else ""
+
+        if state.lower() == "connected" and ssid:
+            report.append(f"\nWIFI: Connected to '{ssid}'")
+            if signal:
+                # Parse signal percentage
+                try:
+                    sig_pct = int(signal.replace("%", ""))
+                    if sig_pct >= 70:
+                        report.append(f"  Signal: Strong ({signal})")
+                    elif sig_pct >= 40:
+                        report.append(f"  Signal: Fair ({signal}) — try moving closer to the router")
+                    else:
+                        report.append(f"  Signal: Weak ({signal}) — this might be why things are slow")
+                except ValueError:
+                    report.append(f"  Signal: {signal}")
+        elif state.lower() == "disconnected":
+            report.append("\nWIFI: ⚠ Not connected to any WiFi network!")
+            report.append("  Click the WiFi icon in the bottom-right corner to connect.")
+        else:
+            report.append(f"\nWIFI: Status is '{state}'")
+    else:
+        report.append("\nWIFI: I couldn't check WiFi status.")
+
+    # Suggest fixes if not connected
+    if not is_connected:
+        report.append("\nHere's what to try:")
+        report.append("  1. Click the WiFi icon (bottom-right) and make sure WiFi is ON")
+        report.append("  2. Pick your WiFi network and enter the password")
+        report.append("  3. If that doesn't work, unplug your router for 30 seconds, then plug it back in")
+        report.append("  4. If WiFi is on but nothing loads, try restarting your computer")
+
+    return "\n".join(report)
+
+
 @mcp.tool()
 def analyze_scam_risk(content: str, content_type: str = "email") -> str:
     """Analyze any content for scam indicators and return a safety assessment.
@@ -959,6 +1234,55 @@ def save_document_as_pdf(save_path: str) -> str:
             "  Step 3: Choose 'PDF' from the file type dropdown\n"
             "  Step 4: Click 'Save'"
         )
+
+
+def smart_save_document(content: str, doc_type: str = "note", title: str = "") -> str:
+    """Save content as a clearly named document with date and time stamp.
+    Use whenever the user creates, downloads, or works on a document.
+    Automatically picks a clear filename with today's date so they can find it later.
+
+    Args:
+        content: The text content to save
+        doc_type: Type of document — "note", "letter", "list", "instructions", "recipe", "other"
+        title: Optional short title (e.g., "Grocery List", "Letter to Sarah"). If empty, auto-generates.
+    """
+    from datetime import datetime
+
+    now = datetime.now()
+    date_str = now.strftime("%B %d %Y")  # "February 12 2026"
+    time_str = now.strftime("%I-%M %p")   # "03-45 PM"
+    date_file = now.strftime("%m-%d-%Y_%I%M%p")  # "02-12-2026_0345PM"
+
+    # Build a clear filename
+    if title.strip():
+        clean_title = "".join(c if c.isalnum() or c in " -_" else "" for c in title.strip())
+    else:
+        clean_title = doc_type.capitalize()
+
+    filename = f"{clean_title} - {date_file}.txt"
+
+    # Save to Documents folder
+    if IS_WINDOWS:
+        docs_dir = Path(os.environ.get("USERPROFILE", "C:/Users/grego")) / "Documents" / "TechBuddy Saved"
+    elif IS_WSL:
+        docs_dir = WIN_HOME / "Documents" / "TechBuddy Saved"
+    else:
+        docs_dir = Path.home() / "Documents" / "TechBuddy Saved"
+
+    docs_dir.mkdir(parents=True, exist_ok=True)
+    file_path = docs_dir / filename
+
+    # Write with a nice header
+    header = f"--- {clean_title} ---\nSaved by TechBuddy on {date_str} at {time_str}\n\n"
+    file_path.write_text(header + content, encoding="utf-8")
+
+    return (
+        f"Saved! I put it in your Documents folder with a clear name:\n\n"
+        f"  File: {filename}\n"
+        f"  Location: {docs_dir}\n\n"
+        f"The date is in the name so you can always find it. "
+        f"Would you like me to open it or email it to someone?"
+    )
 
 
 # ---------------------------------------------------------------------------

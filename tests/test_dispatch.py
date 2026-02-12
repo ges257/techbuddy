@@ -457,3 +457,94 @@ def test_verify_screen_step_includes_expected():
         # Check the text block in the list
         text_block = result[1]
         assert "printer dialog appeared" in text_block["text"].lower()
+
+
+# ---------- System Troubleshooting Tools ----------
+
+def test_check_system_health_returns_report():
+    """check_system_health should return a string with health info."""
+    from mcp_servers.screen_dispatch import check_system_health
+    result = check_system_health()
+    assert isinstance(result, str)
+    assert len(result) > 20  # Should have meaningful content
+
+def test_check_system_health_non_windows():
+    """On non-Windows, should return helpful fallback tips."""
+    from mcp_servers.screen_dispatch import check_system_health, IS_WINDOWS
+    result = check_system_health()
+    if not IS_WINDOWS:
+        assert "try" in result.lower() or "restart" in result.lower()
+
+def test_fix_frozen_program_empty_name():
+    """fix_frozen_program should reject empty program name."""
+    from mcp_servers.screen_dispatch import fix_frozen_program
+    result = fix_frozen_program("")
+    assert "which program" in result.lower()
+
+def test_fix_frozen_program_returns_confirmation():
+    """fix_frozen_program without confirm should ask, not kill."""
+    from mcp_servers.screen_dispatch import fix_frozen_program, IS_WINDOWS
+    result = fix_frozen_program("notepad", confirm=False)
+    assert isinstance(result, str)
+    if not IS_WINDOWS:
+        assert "try" in result.lower() or "task manager" in result.lower()
+
+def test_check_internet_returns_status():
+    """check_internet should return connectivity info."""
+    from mcp_servers.screen_dispatch import check_internet
+    result = check_internet()
+    assert isinstance(result, str)
+    assert len(result) > 20
+
+def test_check_internet_non_windows():
+    """On non-Windows, should return WiFi troubleshooting steps."""
+    from mcp_servers.screen_dispatch import check_internet, IS_WINDOWS
+    result = check_internet()
+    if not IS_WINDOWS:
+        assert "wifi" in result.lower()
+
+
+# ---------- smart_save_document ----------
+
+def test_smart_save_document_creates_file(tmp_path, monkeypatch):
+    """smart_save_document should create a file with content."""
+    import mcp_servers.screen_dispatch as sd
+    monkeypatch.setattr(sd, "WIN_HOME", tmp_path)
+    monkeypatch.setattr(sd, "IS_WSL", True)
+    monkeypatch.setattr(sd, "IS_WINDOWS", False)
+    from mcp_servers.screen_dispatch import smart_save_document
+    result = smart_save_document("My grocery items", doc_type="list", title="Grocery List")
+    assert "saved" in result.lower()
+    assert "grocery list" in result.lower()
+    saved_dir = tmp_path / "Documents" / "TechBuddy Saved"
+    files = list(saved_dir.glob("*.txt"))
+    assert len(files) == 1
+    content = files[0].read_text()
+    assert "My grocery items" in content
+
+def test_smart_save_document_has_date_in_filename(tmp_path, monkeypatch):
+    """smart_save_document should include date in the filename."""
+    import mcp_servers.screen_dispatch as sd
+    monkeypatch.setattr(sd, "WIN_HOME", tmp_path)
+    monkeypatch.setattr(sd, "IS_WSL", True)
+    monkeypatch.setattr(sd, "IS_WINDOWS", False)
+    from mcp_servers.screen_dispatch import smart_save_document
+    result = smart_save_document("Test content", title="Test Doc")
+    saved_dir = tmp_path / "Documents" / "TechBuddy Saved"
+    files = list(saved_dir.glob("*.txt"))
+    assert len(files) == 1
+    # Filename should contain date pattern like 02-12-2026
+    assert "-" in files[0].name and "20" in files[0].name
+
+def test_smart_save_document_has_header(tmp_path, monkeypatch):
+    """smart_save_document should add a header with date."""
+    import mcp_servers.screen_dispatch as sd
+    monkeypatch.setattr(sd, "WIN_HOME", tmp_path)
+    monkeypatch.setattr(sd, "IS_WSL", True)
+    monkeypatch.setattr(sd, "IS_WINDOWS", False)
+    from mcp_servers.screen_dispatch import smart_save_document
+    smart_save_document("Hello world", title="My Note")
+    saved_dir = tmp_path / "Documents" / "TechBuddy Saved"
+    files = list(saved_dir.glob("*.txt"))
+    content = files[0].read_text()
+    assert "Saved by TechBuddy" in content

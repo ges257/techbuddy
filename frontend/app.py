@@ -30,6 +30,10 @@ from mcp_servers.screen_dispatch import (
     describe_screen_action,
     read_my_screen,
     verify_screen_step,
+    check_system_health,
+    fix_frozen_program,
+    check_internet,
+    smart_save_document,
     check_email,
     read_email,
     send_email,
@@ -118,6 +122,13 @@ PROACTIVE TROUBLESHOOTING (this is what makes you special):
   * "Where do I click?" → take screenshot and point out the button
   * "Nothing happened" → take screenshot to verify current state
   * Uncertainty after a complex instruction → "Would you like me to check your screen?"
+
+SYSTEM HEALTH:
+- Use check_system_health when the computer seems slow or programs are laggy
+- Use fix_frozen_program when an app is stuck — ALWAYS confirm before closing (they may lose unsaved work)
+- Use check_internet when they can't get online or pages won't load
+- NEVER restart the computer or close programs without asking first
+- Translate technical info to plain language: "Your computer is using most of its memory" not "12.4/16 GB RAM utilized"
 
 SEARCHING THE WEB:
 - Use search_web to look up info — phone numbers, organizations, scam reports, general knowledge
@@ -323,6 +334,65 @@ TOOLS = [
         },
     },
     {
+        "name": "check_system_health",
+        "description": "Check why the computer is slow or acting up. Shows memory usage, hard drive space, and which programs are using the most resources. Use when they say 'my computer is slow' or 'everything is freezing'.",
+        "input_schema": {
+            "type": "object",
+            "properties": {},
+        },
+    },
+    {
+        "name": "fix_frozen_program",
+        "description": "Close a program that is frozen or not responding. ALWAYS confirm with the user first — they may lose unsaved work. Call without confirm first to check, then with confirm=True to close.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "program_name": {
+                    "type": "string",
+                    "description": "Name of the frozen program (e.g., 'Word', 'Chrome', 'Notepad')",
+                },
+                "confirm": {
+                    "type": "boolean",
+                    "description": "Set to true to actually close the program. False just checks if it's running.",
+                    "default": False,
+                },
+            },
+            "required": ["program_name"],
+        },
+    },
+    {
+        "name": "check_internet",
+        "description": "Check if the internet is working and diagnose WiFi problems. Use when they say 'internet isn't working', 'WiFi is down', or 'pages won't load'.",
+        "input_schema": {
+            "type": "object",
+            "properties": {},
+        },
+    },
+    {
+        "name": "smart_save_document",
+        "description": "Save content as a clearly named document with date and time stamp. Use whenever the user creates, downloads, or works on a document. Puts it in Documents/TechBuddy Saved with a clear name they can find later.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "content": {
+                    "type": "string",
+                    "description": "The text content to save",
+                },
+                "doc_type": {
+                    "type": "string",
+                    "description": "Type: 'note', 'letter', 'list', 'instructions', 'recipe', 'other'",
+                    "default": "note",
+                },
+                "title": {
+                    "type": "string",
+                    "description": "Short title (e.g., 'Grocery List', 'Letter to Sarah'). Auto-generates if empty.",
+                    "default": "",
+                },
+            },
+            "required": ["content"],
+        },
+    },
+    {
         "name": "check_email",
         "description": "Check the email inbox. Shows recent emails with who sent them and what they're about. Use when the user says 'check my email' or 'do I have messages?'",
         "input_schema": {
@@ -479,6 +549,10 @@ TOOL_FUNCTIONS = {
     "describe_screen_action": describe_screen_action,
     "read_my_screen": read_my_screen,
     "verify_screen_step": verify_screen_step,
+    "check_system_health": check_system_health,
+    "fix_frozen_program": fix_frozen_program,
+    "check_internet": check_internet,
+    "smart_save_document": smart_save_document,
     "check_email": check_email,
     "read_email": read_email,
     "send_email": send_email,
