@@ -23,6 +23,10 @@ from mcp_servers.screen_dispatch import (
     click_button,
     type_text,
     describe_screen_action,
+    check_email,
+    read_email,
+    send_email,
+    delete_email,
 )
 
 app = Flask(__name__)
@@ -40,6 +44,7 @@ PERSONALITY:
 - If something goes wrong, never blame them. Say "Let's try that again" not "You entered it wrong".
 
 CAPABILITIES (use the tools provided):
+- Email: use check_email to see their inbox, read_email to read one, send_email to send, delete_email to remove
 - Find files: use find_file or find_recent_files when they've lost a file
 - Open files: use open_file to open a document, photo, or any file
 - List folders: use list_folder to show what's in a folder
@@ -153,6 +158,49 @@ TOOLS = [
             "required": ["task", "app_name"],
         },
     },
+    {
+        "name": "check_email",
+        "description": "Check the email inbox. Shows recent emails with who sent them and what they're about. Use when the user says 'check my email' or 'do I have messages?'",
+        "input_schema": {
+            "type": "object",
+            "properties": {},
+        },
+    },
+    {
+        "name": "read_email",
+        "description": "Read a specific email by its number. Shows the full message. Use after check_email when the user wants to read one.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "email_id": {"type": "integer", "description": "The number of the email to read (from the inbox list)"},
+            },
+            "required": ["email_id"],
+        },
+    },
+    {
+        "name": "send_email",
+        "description": "Send an email to someone. Always confirm the recipient and message with the user before sending.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "to": {"type": "string", "description": "Email address to send to"},
+                "subject": {"type": "string", "description": "Subject line"},
+                "body": {"type": "string", "description": "The message to send"},
+            },
+            "required": ["to", "subject", "body"],
+        },
+    },
+    {
+        "name": "delete_email",
+        "description": "Delete an email from the inbox. Always confirm with the user before deleting.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "email_id": {"type": "integer", "description": "The number of the email to delete"},
+            },
+            "required": ["email_id"],
+        },
+    },
 ]
 
 # Map tool names to actual functions
@@ -165,6 +213,10 @@ TOOL_FUNCTIONS = {
     "click_button": click_button,
     "type_text": type_text,
     "describe_screen_action": describe_screen_action,
+    "check_email": check_email,
+    "read_email": read_email,
+    "send_email": send_email,
+    "delete_email": delete_email,
 }
 
 

@@ -400,5 +400,210 @@ def describe_screen_action(task: str, app_name: str) -> str:
     )
 
 
+# ---------------------------------------------------------------------------
+# Email Module — Simulated inbox for demo (swap for IMAP/SMTP later)
+# ---------------------------------------------------------------------------
+
+SIMULATED_INBOX = [
+    {
+        "id": 1,
+        "from": "Sarah Johnson <sarah.johnson@gmail.com>",
+        "subject": "Sunday dinner at our place!",
+        "date": "February 12, 2026 at 10:15 AM",
+        "preview": "Hi! We'd love to have you over for dinner this Sunday...",
+        "body": (
+            "Hi!\n\n"
+            "We'd love to have you over for dinner this Sunday at 5pm. "
+            "Tommy has been asking about you all week — he wants to show you "
+            "his new drawings!\n\n"
+            "I'm making your favorite pot roast. Let me know if you can make it!\n\n"
+            "Love,\nSarah"
+        ),
+        "is_read": False,
+    },
+    {
+        "id": 2,
+        "from": "CVS Pharmacy <noreply@cvs.com>",
+        "subject": "Your prescription is ready for pickup",
+        "date": "February 12, 2026 at 9:30 AM",
+        "preview": "Your prescription for Lisinopril is ready at the CVS on Main St...",
+        "body": (
+            "Hello,\n\n"
+            "Your prescription for Lisinopril 10mg is ready for pickup at:\n"
+            "CVS Pharmacy — 245 Main Street\n\n"
+            "Pharmacy hours: Mon-Fri 9am-9pm, Sat-Sun 10am-6pm\n\n"
+            "Please bring your insurance card and photo ID.\n\n"
+            "Thank you,\nCVS Pharmacy"
+        ),
+        "is_read": True,
+    },
+    {
+        "id": 3,
+        "from": "Dr. Johnson's Office <appointments@drjohnson.com>",
+        "subject": "Appointment reminder — Thursday Feb 13",
+        "date": "February 11, 2026 at 3:00 PM",
+        "preview": "This is a reminder that you have an appointment tomorrow...",
+        "body": (
+            "Dear Patient,\n\n"
+            "This is a friendly reminder that you have an appointment:\n\n"
+            "Date: Thursday, February 13, 2026\n"
+            "Time: 2:30 PM\n"
+            "Doctor: Dr. Michael Johnson\n"
+            "Location: 100 Medical Center Drive, Suite 204\n\n"
+            "Please arrive 15 minutes early. Bring your insurance card and "
+            "a list of current medications.\n\n"
+            "To reschedule, call (555) 234-5678.\n\n"
+            "Best regards,\nDr. Johnson's Office"
+        ),
+        "is_read": False,
+    },
+    {
+        "id": 4,
+        "from": "Tommy Johnson <tommy.j2018@gmail.com>",
+        "subject": "Look what I drew grandma!!",
+        "date": "February 11, 2026 at 7:45 PM",
+        "preview": "Grandma look I drew a picture of us at the park...",
+        "body": (
+            "GRANDMA LOOK!!\n\n"
+            "I drew a picture of us at the park with the ducks! "
+            "Mom said I could email it to you. Its attached!\n\n"
+            "Can we go feed the ducks again soon??\n\n"
+            "Love Tommy\n"
+            "PS mom helped me spell some words"
+        ),
+        "is_read": False,
+    },
+    {
+        "id": 5,
+        "from": "Prize Winner Notification <winner@free-prizes-now.xyz>",
+        "subject": "CONGRATULATIONS! You've Won $50,000!!!",
+        "date": "February 11, 2026 at 11:20 AM",
+        "preview": "Act now! You have been selected as our GRAND PRIZE WINNER...",
+        "body": (
+            "CONGRATULATIONS!\n\n"
+            "You have been selected as our GRAND PRIZE WINNER of $50,000!\n\n"
+            "To claim your prize, you must act now! Send your:\n"
+            "- Full name\n"
+            "- Social Security Number\n"
+            "- Bank account number\n\n"
+            "Send this information to claim@free-prizes-now.xyz within 24 hours "
+            "or your prize will be given to someone else!\n\n"
+            "Click here to claim: bit.ly/claim-prize-now\n\n"
+            "This is NOT a scam. Act now!"
+        ),
+        "is_read": False,
+    },
+    {
+        "id": 6,
+        "from": "Book Club <bookclub@library.org>",
+        "subject": "Next month's book pick: 'The Thursday Murder Club'",
+        "date": "February 10, 2026 at 2:00 PM",
+        "preview": "Hi everyone! Our next book is The Thursday Murder Club by Richard Osman...",
+        "body": (
+            "Hi everyone!\n\n"
+            "Our next book club pick is:\n"
+            "'The Thursday Murder Club' by Richard Osman\n\n"
+            "We'll meet on Tuesday, March 4th at 10am at the library.\n"
+            "Coffee and cookies will be provided!\n\n"
+            "See you there,\nMargaret\nLibrary Book Club Coordinator"
+        ),
+        "is_read": True,
+    },
+]
+
+# Track inbox state (deleted emails)
+_deleted_ids: set[int] = set()
+_sent_emails: list[dict] = []
+
+
+@mcp.tool()
+def check_email() -> str:
+    """Check the email inbox. Shows recent emails with sender, subject, and date.
+    Use when the user says "check my email" or "do I have any messages?"
+    """
+    active = [e for e in SIMULATED_INBOX if e["id"] not in _deleted_ids]
+
+    if not active:
+        return "Your inbox is empty! No new messages right now."
+
+    unread = sum(1 for e in active if not e["is_read"])
+    lines = [f"You have {len(active)} emails ({unread} unread):\n"]
+
+    for e in active:
+        status = "NEW" if not e["is_read"] else "    "
+        lines.append(f"  [{status}] {e['id']}. From: {e['from'].split('<')[0].strip()}")
+        lines.append(f"         Subject: {e['subject']}")
+        lines.append(f"         {e['date']}")
+        lines.append("")
+
+    return "\n".join(lines)
+
+
+@mcp.tool()
+def read_email(email_id: int) -> str:
+    """Read a specific email by its number. Shows the full message.
+    Use when the user wants to read a particular email from the inbox list.
+
+    Args:
+        email_id: The number of the email to read (from the inbox list)
+    """
+    if email_id in _deleted_ids:
+        return "That email was already deleted."
+
+    email = next((e for e in SIMULATED_INBOX if e["id"] == email_id), None)
+    if not email:
+        return f"I can't find email #{email_id}. Try checking your inbox first to see what's there."
+
+    # Mark as read
+    email["is_read"] = True
+
+    lines = [
+        f"From: {email['from']}",
+        f"Subject: {email['subject']}",
+        f"Date: {email['date']}",
+        "",
+        email["body"],
+    ]
+    return "\n".join(lines)
+
+
+@mcp.tool()
+def send_email(to: str, subject: str, body: str) -> str:
+    """Send an email to someone. Always confirm with the user before sending.
+    Use when the user wants to write and send an email.
+
+    Args:
+        to: Email address of the person to send to
+        subject: Subject line of the email
+        body: The message to send
+    """
+    _sent_emails.append({"to": to, "subject": subject, "body": body})
+    return (
+        f"Email sent!\n\n"
+        f"To: {to}\n"
+        f"Subject: {subject}\n\n"
+        f"Your message has been delivered."
+    )
+
+
+@mcp.tool()
+def delete_email(email_id: int) -> str:
+    """Delete an email from the inbox. Always confirm with the user first.
+    Use when the user wants to remove an email.
+
+    Args:
+        email_id: The number of the email to delete
+    """
+    if email_id in _deleted_ids:
+        return "That email was already deleted."
+
+    email = next((e for e in SIMULATED_INBOX if e["id"] == email_id), None)
+    if not email:
+        return f"I can't find email #{email_id}."
+
+    _deleted_ids.add(email_id)
+    return f"Done! I deleted the email '{email['subject']}' from {email['from'].split('<')[0].strip()}."
+
+
 if __name__ == "__main__":
     mcp.run()

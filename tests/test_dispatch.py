@@ -9,6 +9,10 @@ from mcp_servers.screen_dispatch import (
     list_folder,
     print_document,
     describe_screen_action,
+    check_email,
+    read_email,
+    send_email,
+    delete_email,
 )
 
 
@@ -46,3 +50,32 @@ def test_print_too_many_copies():
     # Should hit the "can't find" check first since file doesn't exist
     # But if file existed, copies > 5 would warn
     assert "can't find" in result.lower() or "lot of copies" in result.lower()
+
+
+# --- Email tools ---
+
+def test_check_email_returns_list():
+    result = check_email()
+    assert "email" in result.lower()
+    assert "Sarah" in result or "CVS" in result
+
+def test_read_email_valid():
+    result = read_email(1)
+    assert "Sarah" in result
+    assert "pot roast" in result.lower() or "dinner" in result.lower()
+
+def test_read_email_invalid():
+    result = read_email(999)
+    assert "can't find" in result.lower()
+
+def test_send_email_success():
+    result = send_email("daughter@gmail.com", "Hi sweetie", "Just wanted to say hello!")
+    assert "sent" in result.lower()
+
+def test_delete_email_valid():
+    result = delete_email(6)
+    assert "deleted" in result.lower() or "done" in result.lower()
+
+def test_inbox_has_scam():
+    result = read_email(5)
+    assert "act now" in result.lower() or "prize" in result.lower() or "social security" in result.lower()
