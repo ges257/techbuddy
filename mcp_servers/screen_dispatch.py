@@ -1093,6 +1093,44 @@ def read_my_screen() -> str | list:
         )
 
 
+def verify_screen_step(expected: str) -> str | list:
+    """Take a screenshot to verify the user completed a step correctly.
+    Use after giving instructions to check that the expected result is visible.
+    For example, after telling them to open Word, verify Word is on screen.
+    After telling them to click Send, verify the email was sent.
+    This is your way of checking their work — like looking over their shoulder.
+    """
+    if not expected or not expected.strip():
+        return "I need to know what to look for. What should be on the screen?"
+
+    # Reuse read_my_screen for the actual screenshot
+    result = read_my_screen()
+
+    # If we got a screenshot (list with image + text), enhance the text prompt
+    if isinstance(result, list) and len(result) >= 2:
+        result[1] = {
+            "type": "text",
+            "text": (
+                f"Here is a screenshot of the user's screen. "
+                f"I was checking whether this step was completed: \"{expected}\"\n\n"
+                f"Look at the screen and tell me:\n"
+                f"1. Is the expected result visible? (yes/no)\n"
+                f"2. If NOT, what IS on screen instead? What might have gone wrong?\n"
+                f"3. Give a simple, encouraging next step.\n\n"
+                f"Use plain, friendly language — no jargon."
+            ),
+        }
+        return result
+
+    # Non-Windows fallback — ask the user to describe what they see
+    return (
+        f"I was checking if this worked: \"{expected}\"\n"
+        "I can't see your screen from here. "
+        "Can you tell me — do you see what we expected? "
+        "Describe what's on your screen and I'll help from there!"
+    )
+
+
 # ---------------------------------------------------------------------------
 # Email Module — Simulated inbox for demo (swap for IMAP/SMTP later)
 # ---------------------------------------------------------------------------

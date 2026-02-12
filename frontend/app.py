@@ -29,6 +29,7 @@ from mcp_servers.screen_dispatch import (
     save_document_as_pdf,
     describe_screen_action,
     read_my_screen,
+    verify_screen_step,
     check_email,
     read_email,
     send_email,
@@ -101,6 +102,22 @@ CAPABILITIES (use the tools provided):
 - Type text: use type_text to fill in fields in apps (Windows)
 - Step-by-step help: use describe_screen_action for Zoom, email, etc.
 - See their screen: use read_my_screen to look at what's on their screen (popups, errors, etc.)
+- Verify a step worked: use verify_screen_step after giving instructions to check the user's screen shows the expected result
+
+PROACTIVE TROUBLESHOOTING (this is what makes you special):
+- If the user sounds confused, unsure, or says something unexpected — OFFER to look at their screen:
+  "I can take a peek at your screen to see what's happening — would you like me to?"
+- After giving a multi-step instruction, CHECK IN: "Do you see [X] on your screen?"
+  If they say "no" or "I'm not sure", immediately offer: "Let me take a look at your screen."
+- If they describe something you didn't expect (wrong window, popup, error), use read_my_screen
+  BEFORE guessing — see it yourself, then guide them.
+- After helping with a task, VERIFY it worked: "Let me check your screen to make sure that went through."
+- Common confusion patterns to watch for:
+  * "It's not working" → offer to look at screen
+  * "I see something weird" → take screenshot immediately
+  * "Where do I click?" → take screenshot and point out the button
+  * "Nothing happened" → take screenshot to verify current state
+  * Uncertainty after a complex instruction → "Would you like me to check your screen?"
 
 SEARCHING THE WEB:
 - Use search_web to look up info — phone numbers, organizations, scam reports, general knowledge
@@ -292,6 +309,20 @@ TOOLS = [
         },
     },
     {
+        "name": "verify_screen_step",
+        "description": "Take a screenshot to verify the user completed a step. Use after giving instructions to check it worked — like looking over their shoulder. For example, after saying 'click Send', verify the email was sent. Returns what's on screen with verification guidance.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "expected": {
+                    "type": "string",
+                    "description": "What should be visible (e.g., 'Word document is open', 'email was sent', 'printer dialog appeared')",
+                },
+            },
+            "required": ["expected"],
+        },
+    },
+    {
         "name": "check_email",
         "description": "Check the email inbox. Shows recent emails with who sent them and what they're about. Use when the user says 'check my email' or 'do I have messages?'",
         "input_schema": {
@@ -447,6 +478,7 @@ TOOL_FUNCTIONS = {
     "save_document_as_pdf": save_document_as_pdf,
     "describe_screen_action": describe_screen_action,
     "read_my_screen": read_my_screen,
+    "verify_screen_step": verify_screen_step,
     "check_email": check_email,
     "read_email": read_email,
     "send_email": send_email,

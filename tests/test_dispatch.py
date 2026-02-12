@@ -425,3 +425,35 @@ def test_save_note_privacy_message(tmp_path, monkeypatch):
     monkeypatch.setattr(sd, "NOTES_DIR", tmp_path)
     result = save_note("test-privacy", "content")
     assert "not in the cloud" in result.lower() or "on your computer" in result.lower()
+
+
+# ---------- verify_screen_step ----------
+
+def test_verify_screen_step_empty_expected():
+    """verify_screen_step should reject empty expected string."""
+    from mcp_servers.screen_dispatch import verify_screen_step
+    result = verify_screen_step("")
+    assert "need to know" in result.lower()
+
+def test_verify_screen_step_returns_content():
+    """verify_screen_step should return string fallback on non-Windows (no PIL)."""
+    from mcp_servers.screen_dispatch import verify_screen_step
+    result = verify_screen_step("Word document is open")
+    # On non-Windows (WSL test), returns a string asking user to describe screen
+    if isinstance(result, str):
+        assert "word document is open" in result.lower()
+    else:
+        # On Windows, returns list with image + verification prompt
+        assert isinstance(result, list)
+        assert len(result) >= 2
+
+def test_verify_screen_step_includes_expected():
+    """verify_screen_step should mention the expected state in its output."""
+    from mcp_servers.screen_dispatch import verify_screen_step
+    result = verify_screen_step("printer dialog appeared")
+    if isinstance(result, str):
+        assert "printer dialog appeared" in result.lower()
+    else:
+        # Check the text block in the list
+        text_block = result[1]
+        assert "printer dialog appeared" in text_block["text"].lower()

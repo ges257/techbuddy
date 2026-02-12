@@ -165,3 +165,14 @@ def test_execute_tool_read_notes():
 def test_execute_tool_recall_user_context():
     result = execute_tool("recall_user_context", {})
     assert isinstance(result, str)
+
+def test_execute_tool_verify_screen_step():
+    result = execute_tool("verify_screen_step", {"expected": "Word is open"})
+    # Returns string on non-Windows, list on Windows
+    assert isinstance(result, (str, list))
+
+def test_system_prompt_has_proactive_troubleshooting():
+    prompt = _build_system_prompt()
+    assert "PROACTIVE TROUBLESHOOTING" in prompt
+    assert "offer to look at their screen" in prompt.lower()
+    assert "verify_screen_step" in prompt or "verify it worked" in prompt.lower()
