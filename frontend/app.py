@@ -20,13 +20,17 @@ from mcp_servers.screen_dispatch import (
     open_file,
     list_folder,
     print_document,
+    troubleshoot_printer,
+    analyze_scam_risk,
     click_button,
     type_text,
+    save_document_as_pdf,
     describe_screen_action,
     check_email,
     read_email,
     send_email,
     delete_email,
+    download_attachment,
     find_photos,
     share_photo,
     check_for_meeting_links,
@@ -48,20 +52,35 @@ PERSONALITY:
 - If something goes wrong, never blame them. Say "Let's try that again" not "You entered it wrong".
 
 CAPABILITIES (use the tools provided):
-- Email: use check_email to see their inbox, read_email to read one, send_email to send, delete_email to remove
+- Email: use check_email to see their inbox, read_email to read one, send_email to send (with optional attachment), delete_email to remove
+- Email attachments: use download_attachment to save an attachment from an email, then open_file to open it
 - Photos: use find_photos to search for pictures, share_photo to email a photo to someone
 - Video calls: use check_for_meeting_links to find meeting invites in email, join_video_call to help join a Zoom/Meet/Teams call
 - Find files: use find_file or find_recent_files when they've lost a file
 - Open files: use open_file to open a document, photo, or any file
 - List folders: use list_folder to show what's in a folder
-- Print: use print_document to send something to the printer
+- Print: use print_document to send something to the printer, troubleshoot_printer to diagnose printer problems
+- Save as PDF: use save_document_as_pdf to save the open Word document as a PDF
 - Click buttons: use click_button to press buttons in apps (Windows)
 - Type text: use type_text to fill in fields in apps (Windows)
 - Step-by-step help: use describe_screen_action for Zoom, email, etc.
 
+SCAM PROTECTION (CRITICAL — elderly Americans lost $4.8 BILLION to scams in 2024):
+- Use analyze_scam_risk on ANY content that seems suspicious — emails, links, phone claims, popups
+- The #1 scam: fake "virus detected" popup → victim calls phone number → scammer gets remote access → steals money
+- NEVER open a link or download a file without checking it first
+- When warning about scams, ALWAYS provide the REAL phone number for the impersonated organization:
+  * IRS: 1-800-829-1040 (they ALWAYS contact by mail first, never by phone/email)
+  * Social Security: 1-800-772-1213 (they NEVER threaten to suspend your number)
+  * Medicare: 1-800-633-4227 (they NEVER call about benefits being cancelled)
+  * FBI Elder Fraud: 1-833-372-8311
+- If the user describes a popup saying "virus detected" or "call this number" — IMMEDIATELY warn this is a scam
+- If someone claims to be from the government demanding money — it's a scam, period
+- If asked to install TeamViewer, AnyDesk, or give remote access — STOP and warn
+
 RULES:
 - Always confirm before sending emails, deleting files, or any action that can't be undone.
-- If you detect a potential scam, warn them clearly.
+- If you detect a potential scam, warn them clearly and firmly — this could save them thousands of dollars.
 - Keep responses SHORT — 2-3 sentences max unless they ask for more detail.
 - If they seem frustrated, slow down and offer encouragement.
 - Never use jargon. Never show error codes or technical messages.
@@ -128,6 +147,37 @@ TOOLS = [
         },
     },
     {
+        "name": "analyze_scam_risk",
+        "description": "Analyze any content for scam indicators. Use this on suspicious emails, links, phone messages, or popups. Returns risk level and plain-language explanation.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "content": {"type": "string", "description": "The text to analyze (email body, URL, phone message, popup text)"},
+                "content_type": {"type": "string", "description": "What kind of content: 'email', 'link', 'phone', 'popup'", "default": "email"},
+            },
+            "required": ["content"],
+        },
+    },
+    {
+        "name": "troubleshoot_printer",
+        "description": "Check why the printer isn't working. Diagnoses offline printer, stuck jobs, wrong default printer. Use when the user says 'my printer isn't working' or 'I can't print'.",
+        "input_schema": {
+            "type": "object",
+            "properties": {},
+        },
+    },
+    {
+        "name": "save_document_as_pdf",
+        "description": "Save the currently open Word document as a PDF. The document must already be open in Word. Use when the user wants to convert a Word doc to PDF.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "save_path": {"type": "string", "description": "Full path where to save the PDF (e.g., 'C:\\Users\\grego\\Desktop\\Letter.pdf')"},
+            },
+            "required": ["save_path"],
+        },
+    },
+    {
         "name": "click_button",
         "description": "Click a button in any open window. Use for Zoom 'Join', Outlook 'Send', etc.",
         "input_schema": {
@@ -185,13 +235,14 @@ TOOLS = [
     },
     {
         "name": "send_email",
-        "description": "Send an email to someone. Always confirm the recipient and message with the user before sending.",
+        "description": "Send an email to someone. Can include a file attachment. Always confirm the recipient and message with the user before sending.",
         "input_schema": {
             "type": "object",
             "properties": {
                 "to": {"type": "string", "description": "Email address to send to"},
                 "subject": {"type": "string", "description": "Subject line"},
                 "body": {"type": "string", "description": "The message to send"},
+                "attachment": {"type": "string", "description": "Full path to a file to attach (optional)", "default": ""},
             },
             "required": ["to", "subject", "body"],
         },
@@ -203,6 +254,18 @@ TOOLS = [
             "type": "object",
             "properties": {
                 "email_id": {"type": "integer", "description": "The number of the email to delete"},
+            },
+            "required": ["email_id"],
+        },
+    },
+    {
+        "name": "download_attachment",
+        "description": "Download an attachment from an email and save it to Downloads folder. Use when the user wants to open or save a file from an email.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "email_id": {"type": "integer", "description": "The email number that has the attachment"},
+                "attachment_name": {"type": "string", "description": "Name of the attachment to download (optional — downloads first one if not specified)", "default": ""},
             },
             "required": ["email_id"],
         },
@@ -258,13 +321,17 @@ TOOL_FUNCTIONS = {
     "open_file": open_file,
     "list_folder": list_folder,
     "print_document": print_document,
+    "troubleshoot_printer": troubleshoot_printer,
+    "analyze_scam_risk": analyze_scam_risk,
     "click_button": click_button,
     "type_text": type_text,
+    "save_document_as_pdf": save_document_as_pdf,
     "describe_screen_action": describe_screen_action,
     "check_email": check_email,
     "read_email": read_email,
     "send_email": send_email,
     "delete_email": delete_email,
+    "download_attachment": download_attachment,
     "find_photos": find_photos,
     "share_photo": share_photo,
     "check_for_meeting_links": check_for_meeting_links,

@@ -49,6 +49,157 @@ mcp = FastMCP("screen-dispatch")
 
 
 # ---------------------------------------------------------------------------
+# Scam Shield — Data and detection engine
+# ---------------------------------------------------------------------------
+
+SCAM_URGENCY_PHRASES = [
+    "act now", "urgent", "immediately", "within 24 hours", "expires today",
+    "don't delay", "time-sensitive", "last chance", "limited time",
+    "your account will be closed", "suspended account", "account suspended",
+    "verify immediately", "respond immediately", "final notice", "final warning",
+]
+
+SCAM_AUTHORITY_KEYWORDS = [
+    "irs", "internal revenue", "social security administration", "ssa",
+    "medicare", "fbi", "department of justice", "doj", "homeland security",
+    "microsoft support", "apple support", "amazon security", "bank of america",
+    "wells fargo", "chase bank",
+]
+
+SCAM_FINANCIAL_PHRASES = [
+    "gift card", "wire transfer", "cryptocurrency", "bitcoin", "western union",
+    "moneygram", "bank account number", "routing number", "social security number",
+    "ssn", "send money", "claim your prize", "you have won", "lottery",
+    "tax refund", "verify your identity", "credit card number",
+]
+
+SCAM_TECH_SUPPORT_PHRASES = [
+    "virus detected", "your computer is infected", "call this number",
+    "remote access", "teamviewer", "anydesk", "chrome remote desktop",
+    "your computer has been compromised", "security alert", "windows alert",
+    "microsoft alert", "apple alert",
+]
+
+SCAM_GRANDPARENT_PHRASES = [
+    "i'm in jail", "need bail", "don't tell anyone", "been arrested",
+    "i need money", "please don't tell mom", "please don't tell dad",
+]
+
+SCAM_SUSPICIOUS_TLDS = [".xyz", ".info", ".top", ".click", ".buzz", ".tk", ".ml", ".ga"]
+SCAM_SHORTENED_URLS = ["bit.ly", "tinyurl", "t.co", "goo.gl", "is.gd", "buff.ly"]
+
+SAFE_ATTACHMENT_EXTENSIONS = {
+    ".pdf", ".doc", ".docx", ".txt", ".rtf", ".odt",
+    ".jpg", ".jpeg", ".png", ".gif", ".bmp", ".tiff", ".heic", ".webp",
+    ".xls", ".xlsx", ".csv", ".ppt", ".pptx",
+}
+
+DANGEROUS_EXTENSIONS = {
+    ".exe", ".bat", ".cmd", ".scr", ".vbs", ".js", ".msi",
+    ".ps1", ".com", ".pif", ".reg", ".wsf", ".hta",
+}
+
+TRUSTED_MEETING_DOMAINS = ["zoom.us", "meet.google.com", "teams.microsoft.com", "teams.live.com"]
+
+KNOWN_LEGITIMATE_CONTACTS = {
+    "irs": {
+        "name": "Internal Revenue Service (IRS)",
+        "phone": "1-800-829-1040",
+        "website": "irs.gov",
+        "key_fact": "The IRS will ALWAYS contact you by MAIL first. They NEVER call, email, or text to demand immediate payment.",
+    },
+    "social security": {
+        "name": "Social Security Administration (SSA)",
+        "phone": "1-800-772-1213",
+        "website": "ssa.gov",
+        "key_fact": "Social Security will NEVER call to threaten you or say your number is suspended.",
+    },
+    "medicare": {
+        "name": "Medicare",
+        "phone": "1-800-633-4227",
+        "website": "medicare.gov",
+        "key_fact": "Medicare will NEVER call to ask for your personal information or threaten your benefits.",
+    },
+    "fbi": {
+        "name": "FBI Elder Fraud Hotline",
+        "phone": "1-833-372-8311",
+        "website": "ic3.gov",
+        "key_fact": "The FBI does NOT call to demand payment or threaten arrest. If you've been scammed, call this number to report it.",
+    },
+    "microsoft": {
+        "name": "Microsoft Support",
+        "phone": "1-800-642-7676",
+        "website": "support.microsoft.com",
+        "key_fact": "Microsoft will NEVER show a popup asking you to call a phone number. Those are always scams.",
+    },
+}
+
+
+def _scan_for_scam(text: str) -> dict:
+    """Scan text for scam indicators. Returns dict with risk level and details.
+
+    Returns:
+        {"risk": "SAFE"|"SUSPICIOUS"|"DANGEROUS",
+         "flags": [...], "matched_orgs": [...]}
+    """
+    text_lower = text.lower()
+    flags = []
+    matched_orgs = []
+
+    # Check urgency phrases
+    for phrase in SCAM_URGENCY_PHRASES:
+        if phrase in text_lower:
+            flags.append(("urgency", phrase))
+
+    # Check authority impersonation
+    for keyword in SCAM_AUTHORITY_KEYWORDS:
+        if keyword in text_lower:
+            flags.append(("authority", keyword))
+            # Map to known org
+            for org_key in KNOWN_LEGITIMATE_CONTACTS:
+                if org_key in keyword or keyword in org_key:
+                    if org_key not in matched_orgs:
+                        matched_orgs.append(org_key)
+
+    # Check financial red flags
+    for phrase in SCAM_FINANCIAL_PHRASES:
+        if phrase in text_lower:
+            flags.append(("financial", phrase))
+
+    # Check tech support scam indicators
+    for phrase in SCAM_TECH_SUPPORT_PHRASES:
+        if phrase in text_lower:
+            flags.append(("tech_support", phrase))
+            if "microsoft" not in matched_orgs:
+                matched_orgs.append("microsoft")
+
+    # Check grandparent scam
+    for phrase in SCAM_GRANDPARENT_PHRASES:
+        if phrase in text_lower:
+            flags.append(("grandparent", phrase))
+
+    # Check suspicious URLs
+    for domain in SCAM_SHORTENED_URLS:
+        if domain in text_lower:
+            flags.append(("shortened_url", domain))
+
+    for tld in SCAM_SUSPICIOUS_TLDS:
+        if tld in text_lower:
+            flags.append(("suspicious_tld", tld))
+
+    # Determine risk level
+    categories = set(f[0] for f in flags)
+    if len(flags) == 0:
+        risk = "SAFE"
+    elif len(flags) >= 3 or "financial" in categories or "tech_support" in categories:
+        risk = "DANGEROUS"
+    else:
+        risk = "SUSPICIOUS"
+
+    return {"risk": risk, "flags": flags, "matched_orgs": matched_orgs}
+
+
+# ---------------------------------------------------------------------------
 # Tier 1: Direct API / subprocess — works on any OS for file/system ops
 # ---------------------------------------------------------------------------
 
@@ -316,6 +467,208 @@ def print_document(file_path: str, copies: int = 1) -> str:
         return "Something went wrong with printing. Is the printer turned on?"
 
 
+@mcp.tool()
+def troubleshoot_printer() -> str:
+    """Check why the printer isn't working. Diagnoses common problems like
+    offline printer, stuck print jobs, or wrong default printer.
+    Use when the user says "my printer isn't working" or "I can't print".
+    """
+    if IS_WINDOWS:
+        return _troubleshoot_printer_windows()
+    else:
+        return _troubleshoot_printer_generic()
+
+
+def _troubleshoot_printer_windows() -> str:
+    """Check printer status on Windows using PowerShell."""
+    report_lines = ["Let me check your printer...\n"]
+
+    # 1. List printers and their status
+    try:
+        result = subprocess.run(
+            ["powershell", "-Command",
+             "Get-Printer | Select-Object Name, PrinterStatus, Type, PortName | ConvertTo-Json"],
+            capture_output=True, text=True, timeout=15,
+        )
+        if result.returncode == 0 and result.stdout.strip():
+            import json
+            printers = json.loads(result.stdout)
+            if not isinstance(printers, list):
+                printers = [printers]
+
+            report_lines.append(f"I found {len(printers)} printer(s):\n")
+            for p in printers:
+                name = p.get("Name", "Unknown")
+                status = p.get("PrinterStatus", "Unknown")
+                # PrinterStatus: 0=Normal, 1=Paused, 2=Error, 3=Deleting, etc.
+                status_map = {0: "Ready", 1: "Paused", 2: "Error", 3: "Deleting",
+                              4: "Paper Jam", 5: "Paper Out", 6: "Manual Feed",
+                              7: "Paper Problem", 8: "Offline"}
+                status_text = status_map.get(status, f"Status code {status}")
+                report_lines.append(f"  Printer: {name}")
+                report_lines.append(f"  Status: {status_text}")
+                report_lines.append("")
+        else:
+            report_lines.append("I couldn't get printer information.\n")
+    except Exception:
+        report_lines.append("I had trouble checking the printers.\n")
+
+    # 2. Check default printer
+    try:
+        result = subprocess.run(
+            ["powershell", "-Command",
+             "(Get-CimInstance -ClassName Win32_Printer | Where-Object {$_.Default}).Name"],
+            capture_output=True, text=True, timeout=10,
+        )
+        default = result.stdout.strip()
+        if default:
+            report_lines.append(f"Your default printer is: {default}\n")
+        else:
+            report_lines.append("No default printer is set! That could be the problem.\n")
+    except Exception:
+        pass
+
+    # 3. Check for stuck print jobs
+    try:
+        result = subprocess.run(
+            ["powershell", "-Command",
+             "Get-PrintJob -PrinterName * -ErrorAction SilentlyContinue | "
+             "Select-Object PrinterName, JobStatus, DocumentName | ConvertTo-Json"],
+            capture_output=True, text=True, timeout=10,
+        )
+        if result.returncode == 0 and result.stdout.strip():
+            import json
+            jobs = json.loads(result.stdout)
+            if not isinstance(jobs, list):
+                jobs = [jobs]
+            if jobs:
+                report_lines.append(f"Stuck print jobs: {len(jobs)} job(s) waiting\n")
+        else:
+            report_lines.append("No stuck print jobs. That's good!\n")
+    except Exception:
+        report_lines.append("No stuck print jobs found.\n")
+
+    # 4. Common fix suggestions
+    report_lines.append("Here's what to try:")
+    report_lines.append("  1. Make sure the printer is turned ON (look for a green light)")
+    report_lines.append("  2. Check that the cable is plugged in, or that WiFi is connected")
+    report_lines.append("  3. Try turning the printer OFF, wait 10 seconds, turn it back ON")
+    report_lines.append("  4. Make sure there's paper in the tray")
+    report_lines.append("  5. If it still doesn't work, we can try clearing the print queue")
+    report_lines.append("\nLet me know what you find and I'll help from there!")
+
+    return "\n".join(report_lines)
+
+
+def _troubleshoot_printer_generic() -> str:
+    """Check printer status on Linux/WSL or provide generic checklist."""
+    report_lines = ["Let me check your printer...\n"]
+
+    # Try lpstat on Linux
+    try:
+        result = subprocess.run(
+            ["lpstat", "-p", "-d"],
+            capture_output=True, text=True, timeout=10,
+        )
+        if result.returncode == 0 and result.stdout.strip():
+            report_lines.append("Printer status:")
+            for line in result.stdout.strip().split("\n"):
+                report_lines.append(f"  {line}")
+            report_lines.append("")
+        else:
+            report_lines.append("I couldn't find any printers set up on this computer.\n")
+    except FileNotFoundError:
+        report_lines.append("I couldn't check the printer status automatically.\n")
+    except Exception:
+        report_lines.append("I had trouble checking the printer.\n")
+
+    report_lines.append("Here's what to try:")
+    report_lines.append("  1. Make sure the printer is turned ON (look for a green light)")
+    report_lines.append("  2. Check that the cable is plugged in, or that WiFi is connected")
+    report_lines.append("  3. Try turning the printer OFF, wait 10 seconds, turn it back ON")
+    report_lines.append("  4. Make sure there's paper in the tray")
+    report_lines.append("  5. Check that the right printer is selected as your default")
+    report_lines.append("\nLet me know what you find and I'll help from there!")
+
+    return "\n".join(report_lines)
+
+
+@mcp.tool()
+def analyze_scam_risk(content: str, content_type: str = "email") -> str:
+    """Analyze any content for scam indicators and return a safety assessment.
+    Use this whenever you encounter suspicious emails, links, phone calls, or popups.
+    Always use this BEFORE opening links, downloading files, or acting on requests
+    that ask for personal information or money.
+
+    Args:
+        content: The text to analyze (email body, URL, phone message, popup text, etc.)
+        content_type: What kind of content — "email", "link", "phone", "popup"
+    """
+    scan = _scan_for_scam(content)
+    risk = scan["risk"]
+    flags = scan["flags"]
+    matched_orgs = scan["matched_orgs"]
+
+    if risk == "SAFE":
+        return "This looks safe. I didn't find any scam indicators."
+
+    # Build warning
+    lines = []
+    if risk == "DANGEROUS":
+        lines.append("DANGER — This is very likely a SCAM!\n")
+    else:
+        lines.append("WARNING — This looks suspicious.\n")
+
+    # Explain what was found
+    lines.append("Here's what I found that concerns me:\n")
+    categories_seen = set()
+    for category, phrase in flags:
+        if category not in categories_seen:
+            categories_seen.add(category)
+            if category == "urgency":
+                lines.append(f"  - Pressure language: \"{phrase}\" — Scammers create fake urgency so you don't think carefully")
+            elif category == "authority":
+                lines.append(f"  - Claims to be from: \"{phrase}\" — Scammers often pretend to be trusted organizations")
+            elif category == "financial":
+                lines.append(f"  - Asks for money/info: \"{phrase}\" — Legitimate organizations don't ask for this by {content_type}")
+            elif category == "tech_support":
+                lines.append(f"  - Fake tech support: \"{phrase}\" — Real companies never show popups asking you to call")
+            elif category == "grandparent":
+                lines.append(f"  - Emergency money request: \"{phrase}\" — This is a common 'grandparent scam'")
+            elif category == "shortened_url":
+                lines.append(f"  - Hidden link: \"{phrase}\" — Scammers hide dangerous links behind shortened URLs")
+            elif category == "suspicious_tld":
+                lines.append(f"  - Suspicious website: \"{phrase}\" — Legitimate organizations don't use these web addresses")
+
+    # Provide legitimate contact info
+    if matched_orgs:
+        lines.append("\nIf this is really from a legitimate organization, here's how to check:\n")
+        for org_key in matched_orgs:
+            org = KNOWN_LEGITIMATE_CONTACTS.get(org_key, {})
+            if org:
+                lines.append(f"  {org['name']}")
+                lines.append(f"    Real phone number: {org['phone']}")
+                lines.append(f"    Real website: {org['website']}")
+                lines.append(f"    Remember: {org['key_fact']}")
+                lines.append("")
+
+    # General advice
+    lines.append("\nWhat you should do:")
+    if risk == "DANGEROUS":
+        lines.append("  1. Do NOT click any links in this message")
+        lines.append("  2. Do NOT call any phone numbers listed here")
+        lines.append("  3. Do NOT send money, gift cards, or personal information")
+        lines.append("  4. Delete this message")
+        if matched_orgs:
+            lines.append("  5. If you're worried, call the REAL number listed above to verify")
+    else:
+        lines.append("  1. Be careful — don't click links or share personal information")
+        lines.append("  2. If someone asks for money or passwords, it's almost certainly a scam")
+        lines.append("  3. When in doubt, ask a family member or call the organization directly")
+
+    return "\n".join(lines)
+
+
 # ---------------------------------------------------------------------------
 # Tier 2: UI Automation (Windows-only, via pywinauto)
 # Stubbed on Linux — returns instructions instead
@@ -377,6 +730,56 @@ def type_text(window_title: str, text: str, field_name: str = "") -> str:
         return f"Please type '{text}' in {window_title}."
     except Exception:
         return f"I couldn't type into {window_title}. Is the window open?"
+
+
+@mcp.tool()
+def save_document_as_pdf(save_path: str) -> str:
+    """Save the currently open Word document as a PDF file.
+    Use when the user wants to convert their Word document to PDF.
+    The document must already be open in Microsoft Word.
+
+    Args:
+        save_path: Full path where to save the PDF (e.g., 'C:\\Users\\grego\\Desktop\\Letter.pdf')
+    """
+    if not IS_WINDOWS:
+        return (
+            "Here's how to save your document as a PDF:\n\n"
+            "  Step 1: Click 'File' in the top-left corner\n"
+            "  Step 2: Click 'Save As'\n"
+            "  Step 3: In the 'Save as type' dropdown, choose 'PDF'\n"
+            "  Step 4: Click 'Save'\n\n"
+            "Your PDF will be saved! Let me know when you're done."
+        )
+
+    try:
+        import win32com.client
+        word = win32com.client.GetActiveObject("Word.Application")
+        doc = word.ActiveDocument
+
+        # Ensure save_path ends with .pdf
+        if not save_path.lower().endswith(".pdf"):
+            save_path = save_path + ".pdf"
+
+        # FileFormat 17 = wdFormatPDF
+        doc.SaveAs2(save_path, FileFormat=17)
+        return (
+            f"Done! I saved your document as a PDF.\n\n"
+            f"File: {save_path}\n\n"
+            f"Would you like me to email it to someone or print it?"
+        )
+    except ImportError:
+        return "I need the pywin32 package to save PDFs. Let's save it manually using File > Save As > PDF."
+    except Exception as e:
+        error_msg = str(e).lower()
+        if "no active" in error_msg or "object" in error_msg:
+            return "I don't see a Word document open right now. Could you open the document you'd like to save as PDF?"
+        return (
+            "I had trouble saving the PDF. Let's try it manually:\n\n"
+            "  Step 1: Click 'File' in the top-left corner\n"
+            "  Step 2: Click 'Save As'\n"
+            "  Step 3: Choose 'PDF' from the file type dropdown\n"
+            "  Step 4: Click 'Save'"
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -489,11 +892,15 @@ SIMULATED_INBOX = [
             "Time: 2:30 PM\n"
             "Doctor: Dr. Michael Johnson\n"
             "Location: 100 Medical Center Drive, Suite 204\n\n"
+            "If you'd prefer a telehealth visit, join via Zoom:\n"
+            "https://zoom.us/j/3678174163\n\n"
             "Please arrive 15 minutes early. Bring your insurance card and "
             "a list of current medications.\n\n"
             "To reschedule, call (555) 234-5678.\n\n"
             "Best regards,\nDr. Johnson's Office"
         ),
+        "meeting_link": "https://zoom.us/j/3678174163",
+        "attachments": [{"name": "Appointment_Details.pdf", "size_kb": 142}],
         "is_read": False,
     },
     {
@@ -510,6 +917,7 @@ SIMULATED_INBOX = [
             "Love Tommy\n"
             "PS mom helped me spell some words"
         ),
+        "attachments": [{"name": "Tommy_Duck_Drawing.png", "size_kb": 340}],
         "is_read": False,
     },
     {
@@ -544,8 +952,10 @@ SIMULATED_INBOX = [
             "'The Thursday Murder Club' by Richard Osman\n\n"
             "We'll meet on Tuesday, March 4th at 10am at the library.\n"
             "Coffee and cookies will be provided!\n\n"
+            "I've attached the full reading list for the next few months.\n\n"
             "See you there,\nMargaret\nLibrary Book Club Coordinator"
         ),
+        "attachments": [{"name": "February_Book_List.pdf", "size_kb": 89}],
         "is_read": True,
     },
 ]
@@ -570,7 +980,11 @@ def check_email() -> str:
 
     for e in active:
         status = "NEW" if not e["is_read"] else "    "
-        lines.append(f"  [{status}] {e['id']}. From: {e['from'].split('<')[0].strip()}")
+        # Scan for scam indicators
+        scan_text = f"{e['from']} {e['subject']} {e.get('preview', '')}"
+        scan = _scan_for_scam(scan_text)
+        warning = " ⚠️ SUSPICIOUS" if scan["risk"] != "SAFE" else ""
+        lines.append(f"  [{status}] {e['id']}. From: {e['from'].split('<')[0].strip()}{warning}")
         lines.append(f"         Subject: {e['subject']}")
         lines.append(f"         {e['date']}")
         lines.append("")
@@ -596,31 +1010,79 @@ def read_email(email_id: int) -> str:
     # Mark as read
     email["is_read"] = True
 
-    lines = [
+    # Auto-scan for scam indicators
+    full_text = f"{email['from']} {email['subject']} {email['body']}"
+    scan = _scan_for_scam(full_text)
+
+    lines = []
+
+    # Prepend scam warning if risky
+    if scan["risk"] == "DANGEROUS":
+        lines.append("⚠️ SCAM WARNING — This email has multiple scam indicators!")
+        lines.append("Do NOT click links, send money, or share personal information.")
+        if scan["matched_orgs"]:
+            for org_key in scan["matched_orgs"]:
+                org = KNOWN_LEGITIMATE_CONTACTS.get(org_key, {})
+                if org:
+                    lines.append(f"If this were really from {org['name']}, call them at {org['phone']} to verify.")
+                    lines.append(f"Remember: {org['key_fact']}")
+        lines.append("")
+        lines.append("--- EMAIL BELOW (read with caution) ---\n")
+    elif scan["risk"] == "SUSPICIOUS":
+        lines.append("⚠️ CAUTION — This email has some suspicious elements. Be careful with any links or requests.")
+        lines.append("")
+
+    lines.extend([
         f"From: {email['from']}",
         f"Subject: {email['subject']}",
         f"Date: {email['date']}",
-        "",
-        email["body"],
-    ]
+    ])
+
+    # Show attachments if present
+    attachments = email.get("attachments", [])
+    if attachments:
+        names = ", ".join(a["name"] for a in attachments)
+        lines.append(f"Attachments: {names}")
+
+    # Show meeting link if present
+    meeting_link = email.get("meeting_link")
+    if meeting_link:
+        lines.append(f"Video call link: {meeting_link}")
+
+    lines.append("")
+    lines.append(email["body"])
     return "\n".join(lines)
 
 
 @mcp.tool()
-def send_email(to: str, subject: str, body: str) -> str:
+def send_email(to: str, subject: str, body: str, attachment: str = "") -> str:
     """Send an email to someone. Always confirm with the user before sending.
-    Use when the user wants to write and send an email.
+    Use when the user wants to write and send an email. Can include a file attachment.
 
     Args:
         to: Email address of the person to send to
         subject: Subject line of the email
         body: The message to send
+        attachment: Full path to a file to attach (optional)
     """
-    _sent_emails.append({"to": to, "subject": subject, "body": body})
+    email_data = {"to": to, "subject": subject, "body": body}
+
+    attachment_note = ""
+    if attachment:
+        att_path = Path(attachment)
+        if not att_path.exists():
+            return f"I can't find the file to attach: {attachment}. Let's find it first."
+        size_mb = att_path.stat().st_size / (1024 * 1024)
+        if size_mb > 25:
+            return f"That file is {size_mb:.1f}MB — too large to email (max 25MB)."
+        email_data["attachment"] = attachment
+        attachment_note = f"\nAttachment: {att_path.name}"
+
+    _sent_emails.append(email_data)
     return (
         f"Email sent!\n\n"
         f"To: {to}\n"
-        f"Subject: {subject}\n\n"
+        f"Subject: {subject}{attachment_note}\n\n"
         f"Your message has been delivered."
     )
 
@@ -642,6 +1104,115 @@ def delete_email(email_id: int) -> str:
 
     _deleted_ids.add(email_id)
     return f"Done! I deleted the email '{email['subject']}' from {email['from'].split('<')[0].strip()}."
+
+
+@mcp.tool()
+def download_attachment(email_id: int, attachment_name: str = "") -> str:
+    """Download an attachment from an email and save it to the Downloads folder.
+    Use when the user wants to open or save a file that came with an email.
+
+    Args:
+        email_id: The number of the email that has the attachment
+        attachment_name: Name of the specific attachment to download (optional — downloads first if not specified)
+    """
+    if email_id in _deleted_ids:
+        return "That email was deleted."
+
+    email = next((e for e in SIMULATED_INBOX if e["id"] == email_id), None)
+    if not email:
+        return f"I can't find email #{email_id}. Try checking your inbox first."
+
+    attachments = email.get("attachments", [])
+    if not attachments:
+        return f"That email from {email['from'].split('<')[0].strip()} doesn't have any attachments."
+
+    # Check if email itself is suspicious — warn before downloading
+    full_text = f"{email['from']} {email['subject']} {email['body']}"
+    scan = _scan_for_scam(full_text)
+    if scan["risk"] == "DANGEROUS":
+        return (
+            "I'm not going to download this — the email it came from looks like a scam.\n\n"
+            "Scam emails sometimes include files that can harm your computer. "
+            "It's safest to delete this email. Would you like me to delete it?"
+        )
+
+    # Find the right attachment
+    if attachment_name:
+        att = next((a for a in attachments if a["name"].lower() == attachment_name.lower()), None)
+        if not att:
+            names = ", ".join(a["name"] for a in attachments)
+            return f"I can't find '{attachment_name}'. The attachments on this email are: {names}"
+    else:
+        att = attachments[0]
+
+    # Block dangerous file types
+    ext = Path(att["name"]).suffix.lower()
+    if ext in DANGEROUS_EXTENSIONS:
+        return (
+            f"I'm blocking this download — '{att['name']}' is a {ext} file.\n\n"
+            f"Files ending in {ext} can contain harmful programs. "
+            f"A real document would end in .pdf, .doc, or .jpg.\n\n"
+            f"This is almost certainly dangerous. I recommend deleting this email."
+        )
+
+    # "Download" to the Downloads folder
+    downloads = WIN_HOME / "Downloads"
+    downloads.mkdir(parents=True, exist_ok=True)
+    save_path = downloads / att["name"]
+
+    # For demo: create a realistic file if it doesn't exist
+    if not save_path.exists():
+        if att["name"].endswith(".pdf"):
+            # Create a simple text-based placeholder (readable in any viewer)
+            content = _generate_demo_attachment(email, att)
+            save_path.write_text(content, encoding="utf-8")
+        elif att["name"].endswith(".png") or att["name"].endswith(".jpg"):
+            # Create a minimal placeholder text file with image extension
+            save_path.write_text(f"[Demo placeholder for {att['name']}]", encoding="utf-8")
+
+    return (
+        f"Downloaded! I saved '{att['name']}' to your Downloads folder.\n\n"
+        f"File: {save_path}\n"
+        f"Size: {att['size_kb']} KB\n\n"
+        f"Would you like me to open it?"
+    )
+
+
+def _generate_demo_attachment(email: dict, att: dict) -> str:
+    """Generate realistic demo content for a simulated email attachment."""
+    if "appointment" in att["name"].lower():
+        return (
+            "APPOINTMENT CONFIRMATION\n"
+            "========================\n\n"
+            "Patient: [Your Name]\n"
+            "Doctor: Dr. Michael Johnson, MD\n"
+            "Date: Thursday, February 13, 2026\n"
+            "Time: 2:30 PM\n"
+            "Location: 100 Medical Center Drive, Suite 204\n\n"
+            "Telehealth Option: https://zoom.us/j/3678174163\n\n"
+            "WHAT TO BRING:\n"
+            "- Insurance card\n"
+            "- Photo ID\n"
+            "- List of current medications\n"
+            "- Any questions you have for the doctor\n\n"
+            "To reschedule: (555) 234-5678\n\n"
+            "We look forward to seeing you!\n"
+        )
+    elif "book" in att["name"].lower():
+        return (
+            "LIBRARY BOOK CLUB — 2026 READING LIST\n"
+            "======================================\n\n"
+            "February: 'The Thursday Murder Club' by Richard Osman\n"
+            "  Meeting: Tuesday, March 4 at 10am\n\n"
+            "March: 'A Man Called Ove' by Fredrik Backman\n"
+            "  Meeting: Tuesday, April 1 at 10am\n\n"
+            "April: 'The Midnight Library' by Matt Haig\n"
+            "  Meeting: Tuesday, May 6 at 10am\n\n"
+            "All meetings at the Main Library, Room 201.\n"
+            "Coffee and cookies provided!\n\n"
+            "Questions? Contact Margaret at bookclub@library.org\n"
+        )
+    return f"Attachment from: {email.get('from', 'Unknown')}\n"
 
 
 # ---------------------------------------------------------------------------
@@ -765,10 +1336,15 @@ def check_for_meeting_links() -> str:
     for email in SIMULATED_INBOX:
         if email["id"] in _deleted_ids:
             continue
+        # Check for explicit meeting_link field first
+        if email.get("meeting_link"):
+            meeting_emails.append(email)
+            continue
+        # Then check body/subject text for meeting keywords
         body_lower = email["body"].lower()
         subject_lower = email["subject"].lower()
         full_text = f"{subject_lower} {body_lower}"
-        if any(kw in full_text for kw in ["zoom", "meet.google", "teams", "meeting", "join"]):
+        if any(kw in full_text for kw in ["zoom", "meet.google", "teams", "meeting link", "join the call"]):
             meeting_emails.append(email)
 
     if not meeting_emails:
@@ -779,9 +1355,12 @@ def check_for_meeting_links() -> str:
         lines.append(f"  From: {e['from'].split('<')[0].strip()}")
         lines.append(f"  Subject: {e['subject']}")
         lines.append(f"  Date: {e['date']}")
+        link = e.get("meeting_link")
+        if link:
+            lines.append(f"  Meeting link: {link}")
         lines.append("")
 
-    lines.append("Would you like me to read one of these and help you join the meeting?")
+    lines.append("Would you like me to help you join one of these meetings?")
     return "\n".join(lines)
 
 
@@ -794,6 +1373,18 @@ def join_video_call(meeting_link: str) -> str:
         meeting_link: The meeting URL (Zoom, Meet, or Teams link)
     """
     link_lower = meeting_link.lower()
+
+    # Validate the meeting URL domain
+    is_trusted = any(domain in link_lower for domain in TRUSTED_MEETING_DOMAINS)
+    if not is_trusted:
+        return (
+            f"I'm not sure this is a real meeting link: {meeting_link}\n\n"
+            "I only recognize links from Zoom (zoom.us), Google Meet (meet.google.com), "
+            "and Microsoft Teams (teams.microsoft.com).\n\n"
+            "If someone sent you this link claiming to be tech support or a government agency, "
+            "it could be a scam. Scammers sometimes use fake meeting links to get access to your computer.\n\n"
+            "If you're sure this is from someone you trust, let me know and I'll open it."
+        )
 
     if "zoom" in link_lower:
         app_name = "Zoom"

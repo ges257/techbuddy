@@ -18,13 +18,17 @@
 - [x] Hook scripts: validate_send.py, accessibility_check.py, verify_elderly_safe.py
 - [x] Test suite: 30/30 pytest (hooks, dispatch, Flask app)
 
-## Day 2 (Feb 12-13) — All 5 Modules
+## Day 2 (Feb 12-13) — All 5 Modules + Demo Scenarios
 - [x] Email assistant (check, read, send, delete + scam detection)
 - [x] Files assistant (find_file, find_recent, open, list — done in Day 1)
 - [x] Printing helper (print_document — done in Day 1)
 - [x] Photo manager (find_photos, share_photo via email)
 - [x] Video call helper (check_for_meeting_links, join_video_call)
-- [ ] End-to-end integration testing
+- [x] 4 demo scenarios: Word→PDF→Email, printer troubleshoot, email attachment→open, Zoom invite
+- [x] New tools: save_document_as_pdf, troubleshoot_printer, download_attachment
+- [x] Enhanced: send_email with attachments, inbox with attachments + meeting links
+- [x] Tests: 54/54 passing
+- [ ] End-to-end integration testing on Windows
 - [ ] Polish + edge cases
 
 ## Day 4 (Feb 15) — Demo + Polish
