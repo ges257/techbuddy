@@ -27,7 +27,10 @@
 - [x] 4 demo scenarios: Word→PDF→Email, printer troubleshoot, email attachment→open, Zoom invite
 - [x] New tools: save_document_as_pdf, troubleshoot_printer, download_attachment
 - [x] Enhanced: send_email with attachments, inbox with attachments + meeting links
-- [x] Tests: 54/54 passing
+- [x] Scam Shield: analyze_scam_risk, auto-scan emails, block dangerous files, validate URLs
+- [x] Real Zoom PMI link (367 817 4163) in Dr. Johnson email
+- [x] Tests: 64/64 passing
+- [x] All work committed and pushed (c423265)
 - [ ] End-to-end integration testing on Windows
 - [ ] Polish + edge cases
 

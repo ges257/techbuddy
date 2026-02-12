@@ -1,5 +1,6 @@
 import os
 import sys
+from datetime import datetime
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -42,6 +43,29 @@ app.secret_key = os.urandom(24)
 
 client = anthropic.Anthropic()
 
+# --- Family SMS Remote Control ---
+# Authorized family contacts — phone number → profile
+FAMILY_CONTACTS = {
+    "+15551234567": {
+        "name": "Sarah",
+        "relationship": "daughter",
+        "can_execute": True,
+        "can_view_status": True,
+        "can_delete": False,
+    },
+    "+15559876543": {
+        "name": "Michael",
+        "relationship": "son",
+        "can_execute": True,
+        "can_view_status": True,
+        "can_delete": True,
+    },
+}
+
+# In-memory queues for family SMS (demo-friendly, no database needed)
+_pending_family_messages = []
+_family_sms_log = []
+
 SYSTEM_PROMPT = """You are TechBuddy, a warm and patient AI assistant that helps elderly people use their computer.
 
 PERSONALITY:
@@ -77,6 +101,15 @@ SCAM PROTECTION (CRITICAL — elderly Americans lost $4.8 BILLION to scams in 20
 - If the user describes a popup saying "virus detected" or "call this number" — IMMEDIATELY warn this is a scam
 - If someone claims to be from the government demanding money — it's a scam, period
 - If asked to install TeamViewer, AnyDesk, or give remote access — STOP and warn
+
+FAMILY SMS REMOTE CONTROL:
+When you receive a message tagged [FAMILY REMOTE REQUEST], a family member is texting via SMS to help their parent.
+- Process their request using your normal tools (check email, troubleshoot printer, find files, etc.)
+- If they say "check on mom" or "how is she doing" — report what you know: recent conversations, any issues
+- Keep SMS replies SHORT (2-3 sentences) — they're reading on a phone
+- ALWAYS tell the elderly user what happened: "Your daughter Sarah asked me to help with the printer"
+- NEVER execute delete/destructive actions from SMS unless the contact has can_delete=True
+- If the request is unclear, ask for clarification in the SMS reply
 
 RULES:
 - Always confirm before sending emails, deleting files, or any action that can't be undone.
@@ -444,6 +477,141 @@ def chat():
     session["history"] = history
 
     return jsonify({"reply": assistant_text})
+
+
+# --- Family SMS Remote Control ---
+
+DESTRUCTIVE_KEYWORDS = ["delete", "remove", "cancel", "unsubscribe", "erase"]
+
+
+def process_family_sms(contact: dict, message: str) -> str:
+    """Process an SMS from a family member through the Claude tool-use loop.
+
+    Returns the reply text to send back to the family member via SMS.
+    Also pushes the interaction to the elderly person's chat window.
+    """
+    name = contact["name"]
+    relationship = contact["relationship"]
+
+    # Block destructive actions if not authorized
+    if any(kw in message.lower() for kw in DESTRUCTIVE_KEYWORDS):
+        if not contact.get("can_delete", False):
+            return (
+                f"Hi {name}, I can't do that through SMS for safety reasons. "
+                f"Please help your mom in person or ask her directly."
+            )
+
+    # Build context-enriched message for Claude
+    context_prefix = (
+        f"[FAMILY REMOTE REQUEST from {name} ({relationship}) via SMS]\n"
+        f"Permissions: execute={contact['can_execute']}, "
+        f"view_status={contact['can_view_status']}, "
+        f"delete={contact['can_delete']}\n"
+        f"Their message: {message}\n\n"
+        f"IMPORTANT: After completing this request, explain what you did "
+        f"as if talking to {name} (the family member), not the elderly user. "
+        f"Keep it brief — this goes back as an SMS (under 300 chars ideal). "
+        f"Also tell the elderly user what happened in a warm, reassuring way."
+    )
+
+    # Each SMS is a standalone conversation (not tied to elderly's session)
+    history = [{"role": "user", "content": context_prefix}]
+
+    try:
+        assistant_text, history = call_claude(history)
+    except Exception:
+        assistant_text = (
+            f"Hi {name}, I had trouble with that request. "
+            f"I'll let your mom know you tried to help."
+        )
+
+    # Log for audit trail
+    _family_sms_log.append({
+        "from": name,
+        "relationship": relationship,
+        "message": message,
+        "reply": assistant_text,
+        "timestamp": datetime.now().isoformat(),
+    })
+
+    # Push to elderly person's chat window
+    _pending_family_messages.append({
+        "from_name": name,
+        "from_relationship": relationship,
+        "original_message": message,
+        "result": assistant_text,
+    })
+
+    return assistant_text
+
+
+@app.route("/sms/simulate", methods=["POST"])
+def sms_simulate():
+    """Simulated SMS endpoint for demo mode — bypasses Twilio entirely."""
+    data = request.get_json()
+    from_number = data.get("from_number", "")
+    body = data.get("message", "").strip()
+
+    if not body:
+        return jsonify({"reply": "I didn't get a message. Try again?", "error": True})
+
+    contact = FAMILY_CONTACTS.get(from_number)
+    if not contact:
+        return jsonify({
+            "reply": "Sorry, this number isn't authorized for TechBuddy.",
+            "error": True,
+        })
+
+    reply_text = process_family_sms(contact, body)
+
+    # Truncate for SMS realism (1600 char Twilio limit)
+    if len(reply_text) > 1500:
+        reply_text = reply_text[:1497] + "..."
+
+    return jsonify({"reply": reply_text})
+
+
+@app.route("/sms/incoming", methods=["POST"])
+def sms_incoming():
+    """Twilio webhook — receives incoming SMS from family members.
+
+    Expects form-encoded POST from Twilio. Returns TwiML XML.
+    Only works when Twilio is configured; otherwise use /sms/simulate.
+    """
+    from_number = request.form.get("From", "")
+    body = request.form.get("Body", "").strip()
+
+    # Build TwiML response
+    def twiml_reply(msg):
+        return (
+            '<?xml version="1.0" encoding="UTF-8"?>'
+            f"<Response><Message>{msg}</Message></Response>"
+        ), 200, {"Content-Type": "text/xml"}
+
+    if not body:
+        return twiml_reply("I didn't get a message. Try again?")
+
+    contact = FAMILY_CONTACTS.get(from_number)
+    if not contact:
+        return twiml_reply(
+            "Sorry, this number isn't authorized for TechBuddy. "
+            "Ask your family member to add you."
+        )
+
+    reply_text = process_family_sms(contact, body)
+
+    if len(reply_text) > 1500:
+        reply_text = reply_text[:1497] + "..."
+
+    return twiml_reply(reply_text)
+
+
+@app.route("/family/messages", methods=["GET"])
+def family_messages():
+    """Polling endpoint — returns pending family messages for the chat UI."""
+    messages = list(_pending_family_messages)
+    _pending_family_messages.clear()
+    return jsonify({"messages": messages})
 
 
 if __name__ == "__main__":

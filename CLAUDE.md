@@ -1,14 +1,15 @@
 # TechBuddy — Claude Code for Elderly People
 
 ## What This Is
-AI chat assistant helping elderly people use their computer through natural conversation. 5 modules: email, files, printing, photos, video calls. Chat window UI with voice input/TTS.
+AI chat assistant helping elderly people use their computer through natural conversation. 5 modules: email, files, printing, photos, video calls. Plus Scam Shield active protection layer. Chat window UI with voice input/TTS.
 
 ## Architecture
 - Frontend: Flask chat window (big text, voice via Web Speech API, TTS via Speech Synthesis)
-- Backend: Claude API (Opus 4.6) as intent router, delegates to specialized subagents
-- 5 subagents in `.claude/agents/`: email-assistant, files-assistant, printing-helper, photo-manager, video-call-helper
-- Dispatch layer in `mcp_servers/screen_dispatch.py`: win32com (Tier 1) → pywinauto (Tier 2) → existing MCP (Tier 3) → Claude Vision text instructions (Tier 4)
+- Backend: Claude API (Opus 4.6) as intent router with 20 tools via direct tool-use loop (up to 5 rounds)
+- Dispatch layer in `mcp_servers/screen_dispatch.py` (1440 lines): 20 tools with tiered fallback: win32com (Tier 1) → pywinauto (Tier 2) → existing MCP (Tier 3) → Claude Vision text instructions (Tier 4)
+- Scam Shield: `_scan_for_scam()` engine scores 7 categories, `analyze_scam_risk()` tool, auto-scan on email read, block dangerous files, validate URLs
 - Hooks in `.claude/settings.json`: PreToolUse (validate sends), PostToolUse (a11y check), SessionStart (git status + TODO), Stop (safety verify)
+- 5 subagent configs in `.claude/agents/` (for Claude Code context, not runtime delegation)
 - MCP config in `.mcp.json`: filesystem, google-workspace, playwright, screen-dispatch, sms-provider
 
 ## Accessibility Standards (Non-Negotiable)
@@ -28,9 +29,9 @@ AI chat assistant helping elderly people use their computer through natural conv
 - Tool names must be dead obvious — no ambiguous or overlapping names
 
 ## Commands
-- Run frontend: `python frontend/app.py`
-- Run MCP server: `python mcp_servers/<server>.py`
-- Test: `pytest tests/`
+- Run frontend: `cd ~/techbuddy && venv/bin/python frontend/app.py` → http://localhost:5000
+- Run on Windows: `cd C:\Users\grego\techbuddy && venv\Scripts\python frontend\app.py`
+- Test: `cd ~/techbuddy && venv/bin/pytest tests/ -v` (64/64 passing)
 - Lint: `ruff check .`
 
 ## Project Gotchas
@@ -42,6 +43,10 @@ AI chat assistant helping elderly people use their computer through natural conv
 - `PostToolUseFailure` does NOT exist — use `PostToolUse` and check for errors
 - MCP tool matcher format: `mcp__servername__toolname`
 - Keep enabled MCP servers to 5-6 max to avoid context bloat
+- Scam Shield scoring: `_scan_for_scam()` returns SAFE (0 flags), SUSPICIOUS (1-2), DANGEROUS (3+ or financial/tech_support present)
+- WSL path detection: `IS_WSL` flag auto-detects, `WIN_HOME` points to `/mnt/c/Users/grego/`
+- Simulated inbox has 6 emails with attachments and meeting links — email #5 is a scam for demo
+- Real Zoom PMI: 367 817 4163 (in Dr. Johnson email #3)
 
 ## When Compacting
 Preserve: modified files list, current module being worked on, which subagents are done vs pending, the tiered fallback architecture, accessibility standards.

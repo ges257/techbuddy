@@ -223,16 +223,139 @@
             background: rgba(255,255,255,0.3);
         }
 
+        .btn-demo {
+            position: absolute;
+            left: 24px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 16px;
+            padding: 8px 16px;
+            background: rgba(255,255,255,0.2);
+            color: white;
+            border: 1px solid rgba(255,255,255,0.4);
+            border-radius: 8px;
+            cursor: pointer;
+        }
+
+        .btn-demo:hover {
+            background: rgba(255,255,255,0.3);
+        }
+
         .header {
             position: relative;
+        }
+
+        /* Family SMS message style */
+        .message-family {
+            align-self: flex-start;
+            background: #E8F5E9;
+            border-left: 4px solid #4CAF50;
+            border-bottom-left-radius: 4px;
+        }
+
+        .message-family .message-label {
+            color: #2E7D32;
+        }
+
+        .family-badge {
+            display: inline-block;
+            background: #4CAF50;
+            color: white;
+            font-size: 12px;
+            padding: 2px 8px;
+            border-radius: 10px;
+            margin-left: 8px;
+            vertical-align: middle;
+        }
+
+        .family-original {
+            font-style: italic;
+            margin-bottom: 8px;
+            color: #555;
+        }
+
+        /* SMS Demo Panel */
+        .sms-panel {
+            display: none;
+            background: #F3E5F5;
+            padding: 12px 24px;
+            border-bottom: 2px solid #CE93D8;
+        }
+
+        .sms-panel-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .sms-panel label {
+            font-weight: bold;
+            color: #7B1FA2;
+            white-space: nowrap;
+        }
+
+        .sms-panel select, .sms-panel input {
+            font-size: 16px;
+            padding: 8px 12px;
+            border: 1px solid #CE93D8;
+            border-radius: 8px;
+        }
+
+        .sms-panel input {
+            flex: 1;
+            min-width: 200px;
+        }
+
+        .sms-panel button {
+            font-size: 16px;
+            padding: 8px 20px;
+            background: #7B1FA2;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+
+        .sms-panel button:hover {
+            background: #6A1B9A;
+        }
+
+        .sms-reply {
+            margin-top: 8px;
+            font-size: 14px;
+            color: #555;
+            display: none;
+        }
+
+        .sms-reply strong {
+            color: #7B1FA2;
         }
     </style>
 </head>
 <body>
     <div class="header">
+        <button class="btn-demo" id="demoBtn" onclick="toggleDemoPanel()" title="Toggle family SMS demo panel">Demo</button>
         TechBuddy
         <div class="header-subtitle">Your friendly computer helper</div>
         <button class="btn-mute" id="muteBtn" onclick="toggleMute()" title="Turn voice on/off">Sound: On</button>
+    </div>
+
+    <div class="sms-panel" id="smsPanel">
+        <div class="sms-panel-row">
+            <label>Family SMS:</label>
+            <select id="smsSender">
+                <option value="+15551234567">Sarah (daughter)</option>
+                <option value="+15559876543">Michael (son)</option>
+            </select>
+            <input type="text" id="smsInput" placeholder="Type SMS message (e.g., 'mom says printer isnt working')..."
+                   onkeydown="if(event.key==='Enter')simulateSMS()">
+            <button onclick="simulateSMS()">Send SMS</button>
+        </div>
+        <div class="sms-reply" id="smsReply">
+            <strong>SMS Reply:</strong> <span id="smsReplyText"></span>
+        </div>
     </div>
 
     <div class="messages" id="messages">
@@ -393,6 +516,79 @@
             muteBtn.textContent = ttsEnabled ? 'Sound: On' : 'Sound: Off';
             if (!ttsEnabled) window.speechSynthesis.cancel();
         }
+
+        // --- Demo Panel (Simulated Family SMS) ---
+        function toggleDemoPanel() {
+            const panel = document.getElementById('smsPanel');
+            panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+        }
+
+        async function simulateSMS() {
+            const fromNumber = document.getElementById('smsSender').value;
+            const message = document.getElementById('smsInput').value.trim();
+            if (!message) return;
+
+            document.getElementById('smsInput').value = '';
+            document.getElementById('smsReply').style.display = 'block';
+            document.getElementById('smsReplyText').textContent = 'Processing...';
+
+            try {
+                const res = await fetch('/sms/simulate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ from_number: fromNumber, message: message })
+                });
+                const data = await res.json();
+                document.getElementById('smsReplyText').textContent = data.reply;
+            } catch (e) {
+                document.getElementById('smsReplyText').textContent = 'Error processing SMS.';
+            }
+        }
+
+        // --- Family Message Polling ---
+        function addFamilyMessage(msg) {
+            if (firstMessage) {
+                const welcome = messagesEl.querySelector('.welcome');
+                if (welcome) welcome.remove();
+                firstMessage = false;
+            }
+
+            const div = document.createElement('div');
+            div.className = 'message message-family';
+
+            const label = document.createElement('div');
+            label.className = 'message-label';
+            label.innerHTML = msg.from_name + ' (' + msg.from_relationship + ') <span class="family-badge">SMS</span>';
+
+            const original = document.createElement('div');
+            original.className = 'family-original';
+            original.textContent = '"' + msg.original_message + '"';
+
+            const result = document.createElement('div');
+            result.textContent = msg.result;
+
+            div.appendChild(label);
+            div.appendChild(original);
+            div.appendChild(result);
+            messagesEl.appendChild(div);
+            messagesEl.scrollTop = messagesEl.scrollHeight;
+
+            // Speak notification to elderly user
+            speakText('Your ' + msg.from_relationship + ' ' + msg.from_name + ' sent a message. ' + msg.result);
+        }
+
+        // Poll for family messages every 3 seconds
+        setInterval(async function() {
+            try {
+                const res = await fetch('/family/messages');
+                const data = await res.json();
+                for (const msg of data.messages) {
+                    addFamilyMessage(msg);
+                }
+            } catch (e) {
+                // Silently ignore polling errors
+            }
+        }, 3000);
 
         // Focus input on load
         inputEl.focus();
