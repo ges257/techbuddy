@@ -1,88 +1,157 @@
-# TechBuddy Setup Log — Feb 11, 2026
+# TechBuddy — Build Log
+**Last updated:** February 11, 2026 — 8:56 PM EST
 
-## Project
-TechBuddy — "Claude Code for Elderly People"
-Built for: "Built with Opus 4.6: a Claude Code Hackathon" (Feb 10-16, 2026, $50K first prize)
-Problem Statement 2: Break the Barriers (digital divide for elderly)
+---
 
-## What Was Done
+## Competition
+- **Event:** "Built with Opus 4.6: a Claude Code Hackathon" (Feb 10–16, 2026)
+- **Deadline:** Monday Feb 16, 3:00 PM EST
+- **Problem:** Statement 2 — Break the Barriers (digital divide for elderly)
+- **Prizes:** $50K first, $25K second, $10K third
+- **Judging:** Demo 30%, Impact 25%, Opus 4.6 Use 25%, Depth & Execution 20%
+- **GitHub:** https://github.com/ges257/techbuddy
 
-### Research Phase (earlier sessions)
-- Read and synthesized 13 Anthropic docs on Claude Code best practices
-- Analyzed Boris Cherny's (Claude Code creator) public workflow recommendations
-- Took notes from Cat Wu's (Claude Code Product Lead) live hackathon AMA
-- Researched Computer Use API limitations (22% desktop reliability) and designed tiered fallback
-- Studied IndyDevDan's multi-agent orchestration patterns
-- Created v4 plan, analyzed corrections, produced v5 final plan
+---
 
-### Reference Documents Created
-All saved to `/home/schwartzlabs.ai/02_projects/hackathon/`:
-- `techbuddy-v5-2_11_26_6-08pm.md` — Complete v5 product build plan
-- `claude-code-setup-plan-2_11_26_6-31pm.md` — Dev environment setup plan (the plan we're executing)
-- `bestpractices-research-2_11_26_4-44pm.md` — 13 Anthropic docs synthesized
-- `improvements_workarounds_to_v4-2_11_26_5-58pm.md` — Workarounds and scaffolding strategies
-- `techbuddy-v4-analysis-2_11_26_5-15pm.md` — v4 corrections
+## Day 0 — Setup (Feb 11, afternoon)
 
-### Setup Phases Completed
+### Research Completed
+- 13 Anthropic docs synthesized (context engineering, hooks, skills, multi-agent, prompting)
+- Boris Cherny (Claude Code creator) workflow analysis
+- Cat Wu (Claude Code Product Lead) hackathon AMA — key insights:
+  - Claude Code Guide Agent = most underused feature
+  - Tool names must be DEAD OBVIOUS
+  - Meta-prompting works better than direct prompting
+  - Less scaffolding = better results (removed 30-40% → improved quality)
+- Computer Use API limitations researched (22% desktop reliability)
+- Designed tiered fallback: win32com → pywinauto → MCP → Claude Vision
+- Plan evolved through 5 versions (v1→v5)
 
-**Phase 1 — Directory Scaffold**
+### Reference Documents (at `/home/schwartzlabs.ai/02_projects/hackathon/`)
+| Document | File |
+|----------|------|
+| Final build plan | `techbuddy-v5-2_11_26_6-08pm.md` |
+| Dev environment setup plan | `claude-code-setup-plan-2_11_26_6-31pm.md` |
+| Best practices research | `bestpractices-research-2_11_26_4-44pm.md` |
+| Computer Use workarounds | `improvements_workarounds_to_v4-2_11_26_5-58pm.md` |
+| Cat Wu AMA notes | `mor aboyt primitritives.md` |
+| Day 0 completion summary | `day0-setup-complete-2_11_26_8-44pm.md` |
+
+### Claude Code Config Created (10 phases, all complete)
+1. **CLAUDE.md** — 48-line project context (architecture, a11y standards, gotchas)
+2. **`.claude/settings.json`** — 4 hook types + 14 permission allows + 4 denies
+3. **`.claude/rules/`** — 3 path-conditional rule files (accessibility, mcp-servers, hooks)
+4. **`.claude/agents/`** — 5 subagent files (email, files, printing, photos, video calls)
+5. **`skills/`** — 4 SKILL.md files (accessibility-check, safety-validation, generate-module, elderly-prompt)
+6. **`.mcp.json`** — MCP config (filesystem + screen-dispatch)
+7. **`TODO.md`** — Build schedule (injected by SessionStart hook)
+8. **Git + GitHub** — Repo at `ges257/techbuddy`, initial commit `7f456fd`
+
+### All 7 Claude Code Primitives Used
+| Primitive | Status | Files |
+|-----------|--------|-------|
+| CLAUDE.md | Done | `CLAUDE.md` |
+| Rules | Done | `.claude/rules/` (3 files) |
+| Hooks | Configured | `.claude/settings.json` (scripts TBD) |
+| Skills | Done | `skills/` (4 dirs) |
+| Subagents | Done | `.claude/agents/` (5 files) |
+| MCP Servers | Configured | `.mcp.json` |
+| Agent Teams | Aware | Documented, not using (experimental) |
+
+---
+
+## Day 1 — Chunk 1: Flask Chat + Claude API (Feb 11, evening)
+
+### What Was Built
+A working Flask chat window that talks to Claude API as TechBuddy.
+
+### Environment Setup
+- Python 3.12.3 virtualenv at `~/techbuddy/venv/`
+- Installed: flask 3.1.2, anthropic 0.79.0, python-dotenv 1.2.1
+- API key stored in `.env` (gitignored)
+
+### Files Created
+| File | Purpose |
+|------|---------|
+| `frontend/app.py` | Flask app — `/` serves UI, `/chat` calls Claude API |
+| `frontend/templates/chat.html` | Chat UI — elderly-accessible, warm colors |
+| `frontend/requirements.txt` | Python dependencies |
+| `.env` | ANTHROPIC_API_KEY (gitignored) |
+| `venv/` | Python virtualenv (gitignored) |
+
+### How to Run
+```bash
+cd ~/techbuddy
+venv/bin/python frontend/app.py
+# Open http://localhost:5000
+```
+
+### What It Does
+- Full-page chat window at `http://localhost:5000`
+- Type a message → Claude Opus 4.6 responds as TechBuddy
+- TechBuddy system prompt: warm, patient, plain language, max 3 steps
+- Conversation history maintained per session (multi-turn)
+- Errors shown as friendly messages (no tracebacks)
+
+### Accessibility (CSS)
+- Font: 20px system font, #1a1a1a on light backgrounds
+- Buttons/inputs: 60px height, 12px border-radius
+- Send button: 100px+ wide, green #4CAF50
+- Background: warm cream #FFF8F0
+- User messages: soft blue #E3F2FD
+- TechBuddy messages: warm peach #FFF3E0
+- "TechBuddy is thinking..." animated indicator
+
+### Verified Working
+- [x] Flask starts without errors
+- [x] Chat UI renders at localhost:5000
+- [x] Message → Claude API → TechBuddy response
+- [x] Response: "Hi there! I'd be happy to help you find your file!"
+- [x] Multi-turn conversation works
+- [x] Font ≥18px, buttons ≥48px
+- [x] Graceful error handling
+
+---
+
+## Current Project Structure
 ```
 ~/techbuddy/
+├── CLAUDE.md                          # Project context
+├── TODO.md                            # Build schedule
+├── SETUP-LOG.md                       # THIS FILE
+├── .mcp.json                          # MCP server config
+├── .env                               # API key (gitignored)
+├── .gitignore                         # .env, venv, __pycache__, etc.
+├── venv/                              # Python virtualenv (gitignored)
+├── frontend/
+│   ├── app.py                         # Flask + Claude API backend
+│   ├── requirements.txt               # Python deps
+│   └── templates/
+│       └── chat.html                  # Chat UI
 ├── .claude/
-│   ├── agents/       (5 subagent files)
-│   ├── rules/        (3 rule files)
-│   └── settings.json (hooks + permissions)
-├── skills/           (4 skill dirs with SKILL.md)
-├── hooks/            (empty — scripts to be written)
-├── mcp_servers/      (empty — servers to be written)
-├── frontend/         (empty — UI to be built)
-├── demos/            (empty — demo assets)
-├── tests/            (empty — tests to be written)
-└── CLAUDE.md         (project context)
+│   ├── settings.json                  # Hooks + permissions
+│   ├── agents/                        # 5 subagent .md files
+│   └── rules/                         # 3 conditional rule files
+├── skills/                            # 4 SKILL.md files
+├── hooks/                             # (empty — Day 1 next)
+├── mcp_servers/                       # (empty — Day 1 next)
+├── demos/                             # (empty — Day 4)
+└── tests/                             # (empty — Day 2+)
 ```
 
-**Phase 2 — CLAUDE.md** (53 lines)
-Project context loaded every Claude Code session. Covers: architecture, accessibility standards, coding conventions, commands, gotchas, compaction instructions.
+---
 
-**Phase 3 — .claude/settings.json**
-- 4 hook types: SessionStart (git status + TODO), PreToolUse x2 (validate sends), PostToolUse (a11y check on Write|Edit), Stop (safety verify)
-- 14 permission allows (python, npm, git, pytest, ruff, etc.)
-- 4 permission denies (rm -rf, force push, hard reset, .env reads)
+## What's Next
 
-**Phase 4 — .claude/rules/** (3 files, path-conditional)
-- `accessibility.md` — triggers on frontend/**, *.html, *.css, *.jsx, *.tsx
-- `mcp-servers.md` — triggers on mcp_servers/**
-- `hooks.md` — triggers on hooks/**
+### Remaining Day 1 Tasks
+- [ ] Add voice input (Web Speech API — browser-side JS)
+- [ ] Add TTS for responses (Speech Synthesis API — browser-side JS)
+- [ ] Backend: Claude API intent router (route to subagents)
+- [ ] Dispatch layer: `mcp_servers/screen_dispatch.py`
+- [ ] Hook scripts: `validate_send.py`, `accessibility_check.py`, `verify_elderly_safe.py`
 
-**Phase 5 — .claude/agents/** (5 subagent files)
-All use model: sonnet, permissionMode: acceptEdits
-
-| Agent | Skills | Scope |
-|-------|--------|-------|
-| email-assistant | a11y-check, safety, elderly-prompt | Read/send email, scam detection |
-| files-assistant | a11y-check, elderly-prompt | Find files by name/date (#1 senior pain point) |
-| printing-helper | safety, elderly-prompt | Print docs, troubleshoot printer issues |
-| photo-manager | a11y-check, elderly-prompt | Find/view/share photos |
-| video-call-helper | elderly-prompt | Join Zoom/Meet/FaceTime, camera/mic help |
-
-**Phase 6 — skills/** (4 SKILL.md files)
-
-| Skill | Purpose |
-|-------|---------|
-| accessibility-check | Enforce 18px font, 48px targets, 4.5:1 contrast, plain language |
-| safety-validation | Validate sends, flag scams, confirm deletes/financial |
-| generate-module | Developer tool: scaffold new subagent + MCP + tests |
-| elderly-prompt | Rewrite text for elderly — word subs, warm tone, no jargon |
-
-## Remaining Phases
-- Phase 7: Write `.mcp.json` (MCP server config)
-- Phase 8: Write `TODO.md` (injected by SessionStart hook)
-- Phase 9: Git commit
-- Phase 10: Create GitHub repo and push
-
-## Key Architecture Decisions
-1. **Tiered fallback** (not Computer Use): win32com → pywinauto → existing MCP → Claude Vision text
-2. **Claude Code primitives**: Using all 7 (CLAUDE.md, Rules, Hooks, Skills, Subagents, MCP, plus awareness of Agent Teams)
-3. **Less scaffolding = better** (Cat Wu): Keep CLAUDE.md tight, don't over-specify
-4. **Tool names dead obvious** (Cat Wu): #1 failure mode is overlapping/confusing tools
-5. **Hooks for safety, not advisory**: Deterministic enforcement of elderly safety guardrails
+### Full Schedule
+- **Day 2 (Feb 13):** Modules 1-3 (email, files, printing)
+- **Day 3 (Feb 14):** Modules 4-5 (photos, video calls) + integration
+- **Day 4 (Feb 15):** Progressive demo + OBS backup + a11y audit
+- **Day 5 (Feb 16):** Final recording + submit by 3:00 PM EST

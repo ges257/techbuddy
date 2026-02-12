@@ -9,13 +9,14 @@
 - [x] skills/ (4 SKILL.md files)
 - [x] .mcp.json (MCP config)
 - [x] TODO.md
-- [ ] Git commit + GitHub repo
+- [x] Git commit + GitHub repo
 
-## Day 1 (Feb 12) — Core Infrastructure
-- [ ] Frontend: Flask chat window (big text, voice input, TTS)
-- [ ] Backend: Claude API intent router
-- [ ] Dispatch layer: mcp_servers/screen_dispatch.py (tiered fallback)
-- [ ] Hook scripts: validate_send.py, accessibility_check.py, verify_elderly_safe.py
+## Day 1 (Feb 11-12) — Core Infrastructure
+- [x] Frontend: Flask chat window (big text, voice input, TTS)
+- [x] Backend: Claude API intent router (tool-use loop, 5 rounds max)
+- [x] Dispatch layer: mcp_servers/screen_dispatch.py (8 tools, tiered fallback)
+- [x] Hook scripts: validate_send.py, accessibility_check.py, verify_elderly_safe.py
+- [x] Test suite: 30/30 pytest (hooks, dispatch, Flask app)
 
 ## Day 2 (Feb 13) — Modules 1-3
 - [ ] Email assistant (read, send, scam detection)
