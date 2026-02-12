@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "filesystem": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-filesystem", "/home/g12"],
+      "description": "Read, write, search, and manage files on the user's computer"
+    },
+    "screen-dispatch": {
+      "command": "python",
+      "args": ["mcp_servers/screen_dispatch.py"],
+      "description": "Execute desktop actions through tiered fallback: win32com, pywinauto, MCP, or Vision instructions"
+    }
+  }
+}

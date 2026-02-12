@@ -1,0 +1,79 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "mcp__email-provider__send_email",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python $CLAUDE_PROJECT_DIR/hooks/validate_send.py"
+          }
+        ]
+      },
+      {
+        "matcher": "mcp__sms-provider__send_sms",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python $CLAUDE_PROJECT_DIR/hooks/validate_send.py"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python $CLAUDE_PROJECT_DIR/hooks/accessibility_check.py"
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "git -C $CLAUDE_PROJECT_DIR status --short 2>/dev/null; echo '---'; cat $CLAUDE_PROJECT_DIR/TODO.md 2>/dev/null || echo 'No TODO.md yet'"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python $CLAUDE_PROJECT_DIR/hooks/verify_elderly_safe.py"
+          }
+        ]
+      }
+    ]
+  },
+  "permissions": {
+    "allow": [
+      "Bash(python *)",
+      "Bash(npm *)",
+      "Bash(npx *)",
+      "Bash(pip install *)",
+      "Bash(pytest *)",
+      "Bash(ruff *)",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(git status*)",
+      "Bash(git diff*)",
+      "Bash(git log*)",
+      "Bash(ls *)",
+      "Bash(mkdir *)",
+      "Bash(cp *)"
+    ],
+    "deny": [
+      "Bash(rm -rf *)",
+      "Bash(git push --force*)",
+      "Bash(git reset --hard*)",
+      "Read(.env*)"
+    ]
+  }
+}
