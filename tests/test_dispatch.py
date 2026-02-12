@@ -13,6 +13,10 @@ from mcp_servers.screen_dispatch import (
     read_email,
     send_email,
     delete_email,
+    find_photos,
+    share_photo,
+    check_for_meeting_links,
+    join_video_call,
 )
 
 
@@ -79,3 +83,35 @@ def test_delete_email_valid():
 def test_inbox_has_scam():
     result = read_email(5)
     assert "act now" in result.lower() or "prize" in result.lower() or "social security" in result.lower()
+
+
+# --- Photo tools ---
+
+def test_find_photos_no_results():
+    result = find_photos("zzz_nonexistent_photo_xyz")
+    assert "couldn't find" in result.lower()
+
+def test_share_photo_missing():
+    result = share_photo("/tmp/zzz_no_such_photo.jpg", "grandma@gmail.com")
+    assert "can't find" in result.lower()
+
+
+# --- Video call tools ---
+
+def test_check_meeting_links():
+    result = check_for_meeting_links()
+    # Inbox has no meeting links in our simulated data, so should say none found
+    assert "don't see" in result.lower() or "found" in result.lower()
+
+def test_join_zoom():
+    result = join_video_call("https://zoom.us/j/123456789")
+    assert "zoom" in result.lower()
+    assert "step" in result.lower() or "join" in result.lower()
+
+def test_join_meet():
+    result = join_video_call("https://meet.google.com/abc-defg-hij")
+    assert "google meet" in result.lower()
+
+def test_join_unknown():
+    result = join_video_call("https://example.com/meeting")
+    assert "join" in result.lower()

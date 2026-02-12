@@ -18,15 +18,14 @@
 - [x] Hook scripts: validate_send.py, accessibility_check.py, verify_elderly_safe.py
 - [x] Test suite: 30/30 pytest (hooks, dispatch, Flask app)
 
-## Day 2 (Feb 13) — Modules 1-3
-- [ ] Email assistant (read, send, scam detection)
-- [ ] Files assistant (find, open, organize)
-- [ ] Printing helper (print, troubleshoot)
-
-## Day 3 (Feb 14) — Modules 4-5 + Integration
-- [ ] Photo manager (find, view, share)
-- [ ] Video call helper (join Zoom/Meet/FaceTime)
-- [ ] End-to-end testing across modules
+## Day 2 (Feb 12-13) — All 5 Modules
+- [x] Email assistant (check, read, send, delete + scam detection)
+- [x] Files assistant (find_file, find_recent, open, list — done in Day 1)
+- [x] Printing helper (print_document — done in Day 1)
+- [x] Photo manager (find_photos, share_photo via email)
+- [x] Video call helper (check_for_meeting_links, join_video_call)
+- [ ] End-to-end integration testing
+- [ ] Polish + edge cases
 
 ## Day 4 (Feb 15) — Demo + Polish
 - [ ] Progressive demo: story layer → API layer → wow layer → architecture layer

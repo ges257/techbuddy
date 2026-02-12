@@ -27,6 +27,10 @@ from mcp_servers.screen_dispatch import (
     read_email,
     send_email,
     delete_email,
+    find_photos,
+    share_photo,
+    check_for_meeting_links,
+    join_video_call,
 )
 
 app = Flask(__name__)
@@ -45,6 +49,8 @@ PERSONALITY:
 
 CAPABILITIES (use the tools provided):
 - Email: use check_email to see their inbox, read_email to read one, send_email to send, delete_email to remove
+- Photos: use find_photos to search for pictures, share_photo to email a photo to someone
+- Video calls: use check_for_meeting_links to find meeting invites in email, join_video_call to help join a Zoom/Meet/Teams call
 - Find files: use find_file or find_recent_files when they've lost a file
 - Open files: use open_file to open a document, photo, or any file
 - List folders: use list_folder to show what's in a folder
@@ -201,6 +207,48 @@ TOOLS = [
             "required": ["email_id"],
         },
     },
+    {
+        "name": "find_photos",
+        "description": "Find photos on the computer by name or date. Use when the user says 'find my photos' or 'where are my vacation pictures?'",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "search_term": {"type": "string", "description": "What to search for (e.g., 'vacation', 'grandkids')", "default": ""},
+                "days_back": {"type": "integer", "description": "How many days back to look (0 = search by name only)", "default": 0},
+            },
+        },
+    },
+    {
+        "name": "share_photo",
+        "description": "Email a photo to someone. Always confirm with the user before sending.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "photo_path": {"type": "string", "description": "Full path to the photo"},
+                "to_email": {"type": "string", "description": "Email address to send the photo to"},
+            },
+            "required": ["photo_path", "to_email"],
+        },
+    },
+    {
+        "name": "check_for_meeting_links",
+        "description": "Check emails for video call links (Zoom, Google Meet, Teams). Use when the user asks about meetings or calls.",
+        "input_schema": {
+            "type": "object",
+            "properties": {},
+        },
+    },
+    {
+        "name": "join_video_call",
+        "description": "Help the user join a video call by opening the meeting link and giving step-by-step instructions.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "meeting_link": {"type": "string", "description": "The meeting URL (Zoom, Meet, or Teams link)"},
+            },
+            "required": ["meeting_link"],
+        },
+    },
 ]
 
 # Map tool names to actual functions
@@ -217,6 +265,10 @@ TOOL_FUNCTIONS = {
     "read_email": read_email,
     "send_email": send_email,
     "delete_email": delete_email,
+    "find_photos": find_photos,
+    "share_photo": share_photo,
+    "check_for_meeting_links": check_for_meeting_links,
+    "join_video_call": join_video_call,
 }
 
 

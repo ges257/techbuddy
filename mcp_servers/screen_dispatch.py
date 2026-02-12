@@ -605,5 +605,200 @@ def delete_email(email_id: int) -> str:
     return f"Done! I deleted the email '{email['subject']}' from {email['from'].split('<')[0].strip()}."
 
 
+# ---------------------------------------------------------------------------
+# Photo Module — Find and manage photos
+# ---------------------------------------------------------------------------
+
+PHOTO_EXTENSIONS = {".jpg", ".jpeg", ".png", ".gif", ".bmp", ".tiff", ".heic", ".webp"}
+
+
+@mcp.tool()
+def find_photos(search_term: str = "", days_back: int = 0) -> str:
+    """Find photos on the computer. Search by name or find recent photos.
+    Use when the user says "find my photos" or "where are my vacation pictures?"
+
+    Args:
+        search_term: What to search for (e.g., "vacation", "christmas", "grandkids"). Leave empty to find all recent photos.
+        days_back: How many days back to look (0 = search by name only)
+    """
+    results = []
+    search_dirs = [
+        HOME / "Pictures",
+        HOME / "Desktop",
+        HOME / "Documents",
+        HOME / "Downloads",
+    ]
+
+    cutoff = None
+    if days_back > 0:
+        cutoff = datetime.now() - timedelta(days=days_back)
+
+    for search_dir in search_dirs:
+        if not search_dir.exists():
+            continue
+        try:
+            for match in search_dir.rglob("*"):
+                if not match.is_file():
+                    continue
+                if match.suffix.lower() not in PHOTO_EXTENSIONS:
+                    continue
+                if search_term and search_term.lower() not in match.name.lower():
+                    continue
+                stat = match.stat()
+                modified = datetime.fromtimestamp(stat.st_mtime)
+                if cutoff and modified < cutoff:
+                    continue
+                results.append({
+                    "path": str(match),
+                    "name": match.name,
+                    "folder": str(match.parent),
+                    "modified": modified.strftime("%B %d, %Y at %I:%M %p"),
+                    "size_kb": round(stat.st_size / 1024, 1),
+                })
+        except PermissionError:
+            continue
+
+    results.sort(key=lambda x: x["modified"], reverse=True)
+
+    if not results:
+        if search_term:
+            return f"I couldn't find any photos with '{search_term}' in the name. Would you like me to look somewhere else?"
+        return "I didn't find any recent photos. Would you like me to search for specific ones by name?"
+
+    lines = [f"I found {len(results)} photo(s):\n"]
+    for i, r in enumerate(results[:10], 1):
+        lines.append(f"{i}. {r['name']}")
+        lines.append(f"   In: {r['folder']}")
+        lines.append(f"   Taken/saved: {r['modified']}")
+        lines.append("")
+
+    if len(results) > 10:
+        lines.append(f"...and {len(results) - 10} more photos.")
+
+    return "\n".join(lines)
+
+
+@mcp.tool()
+def share_photo(photo_path: str, to_email: str) -> str:
+    """Share a photo by emailing it to someone. Always confirm with the user first.
+    Use when the user wants to send a photo to family or friends.
+
+    Args:
+        photo_path: Full path to the photo to share
+        to_email: Email address to send the photo to
+    """
+    path = Path(photo_path)
+    if not path.exists():
+        return f"I can't find that photo at {photo_path}. Let's find it first."
+
+    if path.suffix.lower() not in PHOTO_EXTENSIONS:
+        return "That doesn't seem to be a photo file. Would you like to find your photos first?"
+
+    size_mb = path.stat().st_size / (1024 * 1024)
+    if size_mb > 25:
+        return f"That photo is {size_mb:.1f}MB — too large to email. Would you like me to help you resize it first?"
+
+    _sent_emails.append({
+        "to": to_email,
+        "subject": f"Photo: {path.name}",
+        "body": f"Here's the photo you wanted! ({path.name})",
+        "attachment": str(path),
+    })
+    return f"Done! I sent {path.name} to {to_email}. They should receive it shortly."
+
+
+# ---------------------------------------------------------------------------
+# Video Call Module — Help join and manage video calls
+# ---------------------------------------------------------------------------
+
+@mcp.tool()
+def check_for_meeting_links() -> str:
+    """Check emails for video call meeting links (Zoom, Google Meet, Teams).
+    Use when the user says "do I have any meetings?" or "how do I join my call?"
+    """
+    meeting_emails = []
+    for email in SIMULATED_INBOX:
+        if email["id"] in _deleted_ids:
+            continue
+        body_lower = email["body"].lower()
+        subject_lower = email["subject"].lower()
+        full_text = f"{subject_lower} {body_lower}"
+        if any(kw in full_text for kw in ["zoom", "meet.google", "teams", "meeting", "join"]):
+            meeting_emails.append(email)
+
+    if not meeting_emails:
+        return "I don't see any meeting links in your recent emails. Are you expecting a call from someone? I can help you set one up."
+
+    lines = ["I found these meeting-related emails:\n"]
+    for e in meeting_emails:
+        lines.append(f"  From: {e['from'].split('<')[0].strip()}")
+        lines.append(f"  Subject: {e['subject']}")
+        lines.append(f"  Date: {e['date']}")
+        lines.append("")
+
+    lines.append("Would you like me to read one of these and help you join the meeting?")
+    return "\n".join(lines)
+
+
+@mcp.tool()
+def join_video_call(meeting_link: str) -> str:
+    """Help the user join a video call by opening the meeting link.
+    Use when the user has a Zoom, Google Meet, or Teams link to join.
+
+    Args:
+        meeting_link: The meeting URL (Zoom, Meet, or Teams link)
+    """
+    link_lower = meeting_link.lower()
+
+    if "zoom" in link_lower:
+        app_name = "Zoom"
+        steps = [
+            "I'm opening the Zoom link now.",
+            "If a window pops up asking to open Zoom, click 'Open Zoom Meetings'.",
+            "You'll see a preview of your camera — make sure you look okay!",
+            "Click the blue 'Join' button.",
+            "You're in! If you can't hear anyone, check that your speaker is on.",
+        ]
+    elif "meet.google" in link_lower:
+        app_name = "Google Meet"
+        steps = [
+            "I'm opening Google Meet in your browser.",
+            "You'll see a camera preview — check that you can see yourself.",
+            "Click the big 'Join now' button.",
+            "You're in! If your microphone is muted, click the microphone icon at the bottom.",
+        ]
+    elif "teams" in link_lower:
+        app_name = "Microsoft Teams"
+        steps = [
+            "I'm opening the Teams meeting link.",
+            "If it asks, choose 'Continue on this browser' or 'Open Microsoft Teams'.",
+            "Click 'Join now' when you're ready.",
+            "You're in! The microphone and camera buttons are at the top.",
+        ]
+    else:
+        app_name = "video call"
+        steps = [
+            "I'm opening the meeting link now.",
+            "Look for a 'Join' or 'Join Meeting' button and click it.",
+            "Make sure your camera and microphone are turned on.",
+        ]
+
+    # Try to open the link
+    try:
+        if IS_WINDOWS:
+            os.startfile(meeting_link)
+        else:
+            subprocess.Popen(["xdg-open", meeting_link],
+                             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    except Exception:
+        pass  # Link opening is best-effort
+
+    lines = [f"Let's get you into your {app_name} call!\n"]
+    for i, step in enumerate(steps, 1):
+        lines.append(f"  Step {i}: {step}")
+    lines.append("\nTake your time — I'm right here if you need help!")
+    return "\n".join(lines)
+
+
 if __name__ == "__main__":
     mcp.run()
