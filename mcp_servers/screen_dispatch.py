@@ -11,6 +11,7 @@ On WSL2/Linux: Tiers 1-2 are stubbed (Windows-only). Tier 3 (filesystem/web)
 and Tier 4 (Vision) work everywhere.
 """
 import os
+import re
 import sys
 import glob
 import shutil
@@ -46,6 +47,115 @@ USER_FOLDERS = [
 ]
 
 mcp = FastMCP("screen-dispatch")
+
+# ---------------------------------------------------------------------------
+# Anthropic client injection (set by app.py at startup)
+# Used by tools that need their own API calls (scam analysis, vision)
+# ---------------------------------------------------------------------------
+_anthropic_client = None
+
+
+def set_anthropic_client(client):
+    """Set the Anthropic client for tools that need their own API calls."""
+    global _anthropic_client
+    _anthropic_client = client
+
+
+# ---------------------------------------------------------------------------
+# Local Memory — Notes stored on the user's PC (never in the cloud)
+# ---------------------------------------------------------------------------
+if IS_WINDOWS:
+    NOTES_DIR = Path.home() / "TechBuddy Notes"
+elif IS_WSL:
+    NOTES_DIR = WIN_HOME / "TechBuddy Notes"
+else:
+    NOTES_DIR = Path.home() / "TechBuddy Notes"
+
+
+# ---------------------------------------------------------------------------
+# Web Search — DuckDuckGo (free, no API key needed)
+# ---------------------------------------------------------------------------
+
+def _search_web_raw(query: str, max_results: int = 3) -> list[dict]:
+    """Search the web using DuckDuckGo. Returns list of {title, href, body}.
+
+    Gracefully returns empty list if library not installed or search fails.
+    """
+    try:
+        try:
+            from ddgs import DDGS
+        except ImportError:
+            from duckduckgo_search import DDGS
+        with DDGS() as ddgs:
+            results = list(ddgs.text(query, max_results=max_results))
+            return [{"title": r.get("title", ""), "href": r.get("href", ""), "body": r.get("body", "")}
+                    for r in results]
+    except ImportError:
+        return []
+    except Exception:
+        return []
+
+
+def _web_verify_scam(content: str, matched_orgs: list[str]) -> str:
+    """Search the web to verify claims in suspicious content.
+
+    Checks org phone numbers, suspicious domains, and reported scam numbers.
+    Returns a summary of web verification findings.
+    """
+    findings = []
+
+    # Extract phone numbers from content
+    phone_pattern = r'1?[-.\s]?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}'
+    phones_in_content = re.findall(phone_pattern, content)
+
+    # Extract domains from content
+    domain_pattern = r'(?:https?://)?([a-zA-Z0-9.-]+\.[a-zA-Z]{2,})'
+    domains_in_content = re.findall(domain_pattern, content)
+
+    searches_done = 0
+    max_searches = 6
+
+    # 1. Verify matched organizations' real phone numbers
+    for org_key in matched_orgs[:2]:
+        if searches_done >= max_searches:
+            break
+        org = KNOWN_LEGITIMATE_CONTACTS.get(org_key, {})
+        if org:
+            results = _search_web_raw(f"{org['name']} official phone number 2026", max_results=2)
+            if results:
+                findings.append(f"Web check for {org['name']}: {results[0]['body'][:200]}")
+            searches_done += 1
+
+    # 2. Check suspicious domains
+    safe_domains = {"gmail.com", "yahoo.com", "outlook.com", "hotmail.com", "cvs.com",
+                    "zoom.us", "google.com", "microsoft.com", "apple.com"}
+    for domain in domains_in_content[:2]:
+        if searches_done >= max_searches:
+            break
+        if domain.lower() not in safe_domains:
+            results = _search_web_raw(f'"{domain}" scam report', max_results=2)
+            if results:
+                findings.append(f"Web check for {domain}: {results[0]['body'][:200]}")
+            searches_done += 1
+
+    # 3. Check unknown phone numbers
+    for phone in phones_in_content[:2]:
+        if searches_done >= max_searches:
+            break
+        # Skip known legitimate numbers
+        clean_phone = re.sub(r'[^\d]', '', phone)
+        known_numbers = {re.sub(r'[^\d]', '', org['phone'])
+                        for org in KNOWN_LEGITIMATE_CONTACTS.values()}
+        if clean_phone not in known_numbers and len(clean_phone) >= 10:
+            results = _search_web_raw(f'"{phone}" scam report', max_results=2)
+            if results:
+                findings.append(f"Web check for {phone}: {results[0]['body'][:200]}")
+            searches_done += 1
+
+    if not findings:
+        return ""
+
+    return "WEB VERIFICATION RESULTS:\n" + "\n".join(findings)
 
 
 # ---------------------------------------------------------------------------
@@ -612,7 +722,76 @@ def analyze_scam_risk(content: str, content_type: str = "email") -> str:
     if risk == "SAFE":
         return "This looks safe. I didn't find any scam indicators."
 
-    # Build warning
+    # --- Web verification: search the internet to verify claims ---
+    web_evidence = _web_verify_scam(content, matched_orgs)
+
+    # --- Extended Thinking: deep scam analysis when suspicious/dangerous ---
+    # Uses Opus 4.6 extended thinking to REASON about why this is a scam
+    # instead of just keyword matching. Judges see the thinking trace.
+    if _anthropic_client is not None:
+        try:
+            web_context = f"\n\n{web_evidence}" if web_evidence else ""
+            thinking_result = _anthropic_client.messages.create(
+                model="claude-opus-4-6",
+                max_tokens=8000,
+                thinking={"type": "adaptive"},
+                messages=[{
+                    "role": "user",
+                    "content": (
+                        f"You are a scam detection expert protecting an elderly person. "
+                        f"Analyze this {content_type} for scam risk.\n\n"
+                        f"Content:\n{content}\n\n"
+                        f"Our keyword pre-filter found these flags: {flags}\n"
+                        f"Matched organizations: {matched_orgs}\n"
+                        f"{web_context}\n\n"
+                        f"Provide your analysis in this exact format:\n"
+                        f"RISK: HIGH or MEDIUM\n"
+                        f"TYPE: (tech support / phishing / lottery / grandparent / romance / government impersonation / other)\n"
+                        f"EXPLANATION: (2-3 sentences in plain language an elderly person can understand)\n"
+                        f"WHAT TO DO:\n- (step 1)\n- (step 2)\n- (step 3)\n\n"
+                        f"Keep it under 200 words. Use simple language."
+                    ),
+                }],
+            )
+
+            # Extract the thinking trace and the final response
+            thinking_summary = ""
+            deep_analysis = ""
+            for block in thinking_result.content:
+                if block.type == "thinking":
+                    thinking_summary = block.thinking
+                elif block.type == "text":
+                    deep_analysis = block.text
+
+            # Build the combined response
+            lines = []
+            if risk == "DANGEROUS":
+                lines.append("DANGER — This is very likely a SCAM!\n")
+            else:
+                lines.append("WARNING — This looks suspicious.\n")
+
+            lines.append(deep_analysis)
+
+            # Still append the real contact numbers from keyword matching
+            if matched_orgs:
+                lines.append("\nVerified contact numbers (call these to check):\n")
+                for org_key in matched_orgs:
+                    org = KNOWN_LEGITIMATE_CONTACTS.get(org_key, {})
+                    if org:
+                        lines.append(f"  {org['name']}: {org['phone']}")
+                        lines.append(f"    {org['key_fact']}")
+                        lines.append("")
+
+            # Embed thinking trace for UI extraction
+            if thinking_summary:
+                lines.append(f"\n[THINKING_TRACE]{thinking_summary}[/THINKING_TRACE]")
+
+            return "\n".join(lines)
+
+        except Exception:
+            pass  # Fall through to keyword-only response below
+
+    # --- Keyword-only fallback (no API client or API error) ---
     lines = []
     if risk == "DANGEROUS":
         lines.append("DANGER — This is very likely a SCAM!\n")
@@ -840,6 +1019,78 @@ def describe_screen_action(task: str, app_name: str) -> str:
         f"I'm not sure exactly how to help with '{task}' in {app_name} automatically, "
         f"but I can walk you through it step by step. Can you tell me what you see on your screen right now?"
     )
+
+
+# ---------------------------------------------------------------------------
+# Tier 4b: Claude Vision — read the user's actual screen
+# ---------------------------------------------------------------------------
+
+@mcp.tool()
+def read_my_screen() -> str | list:
+    """Take a screenshot of the user's screen so you can SEE what they see.
+    Use when the user says 'what's on my screen?', 'I see a popup',
+    'something appeared', 'what does this error say?', 'what should I click?',
+    or 'I don't know what I'm looking at'.
+    This lets you actually look at their screen and give specific help.
+    """
+    if not IS_WINDOWS:
+        return (
+            "I can't see your screen from here, but I'd like to help! "
+            "Can you describe what you see? For example, what does the message say, "
+            "or what buttons do you see?"
+        )
+
+    try:
+        import io
+        import base64
+        from PIL import ImageGrab
+
+        # Capture the screen
+        screenshot = ImageGrab.grab()
+
+        # Resize if very large (cap at 1920px width to save tokens)
+        max_width = 1920
+        if screenshot.width > max_width:
+            ratio = max_width / screenshot.width
+            new_size = (max_width, int(screenshot.height * ratio))
+            screenshot = screenshot.resize(new_size)
+
+        # Convert to PNG bytes then base64
+        buffer = io.BytesIO()
+        screenshot.save(buffer, format="PNG", optimize=True)
+        base64_data = base64.b64encode(buffer.getvalue()).decode("utf-8")
+
+        # Return structured content (image + text) for the tool result
+        return [
+            {
+                "type": "image",
+                "source": {
+                    "type": "base64",
+                    "media_type": "image/png",
+                    "data": base64_data,
+                },
+            },
+            {
+                "type": "text",
+                "text": (
+                    "Here is a screenshot of the user's screen. "
+                    "Describe what you see in simple, plain language. "
+                    "If there's a popup or error, explain what it means and what they should do. "
+                    "If it looks like a scam popup, warn them immediately."
+                ),
+            },
+        ]
+
+    except ImportError:
+        return (
+            "I need a helper program to see your screen. "
+            "Can you describe what you see instead? What does the message or popup say?"
+        )
+    except Exception:
+        return (
+            "I had trouble taking a picture of your screen. "
+            "Can you tell me what you see? Read me any messages or describe the buttons."
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -1434,6 +1685,146 @@ def join_video_call(meeting_link: str) -> str:
         lines.append(f"  Step {i}: {step}")
     lines.append("\nTake your time — I'm right here if you need help!")
     return "\n".join(lines)
+
+
+# ---------------------------------------------------------------------------
+# Web Search — Tool #22
+# ---------------------------------------------------------------------------
+
+@mcp.tool()
+def search_web(query: str, num_results: int = 3) -> str:
+    """Search the internet for information. Use when the user asks a question
+    you don't know the answer to, when you need to verify something (like a
+    phone number or organization), or when the user asks 'look this up for me'.
+
+    Args:
+        query: What to search for (e.g., "IRS phone number", "CVS pharmacy hours Main Street")
+        num_results: How many results to return (1-5, default 3)
+    """
+    if not query.strip():
+        return "I need something to search for. What would you like me to look up?"
+
+    num_results = max(1, min(5, num_results))
+    results = _search_web_raw(query, max_results=num_results)
+
+    if not results:
+        return (
+            f"I wasn't able to search for '{query}' right now. "
+            f"Let me try to help you with what I know."
+        )
+
+    lines = [f"Here's what I found about '{query}':\n"]
+    for i, r in enumerate(results, 1):
+        lines.append(f"{i}. {r['title']}")
+        lines.append(f"   {r['body'][:300]}")
+        lines.append("")
+
+    return "\n".join(lines)
+
+
+# ---------------------------------------------------------------------------
+# Local Memory — Tools #23, #24, #25
+# ---------------------------------------------------------------------------
+
+@mcp.tool()
+def save_note(filename: str, content: str) -> str:
+    """Save a note about the user on their computer. Use this to remember
+    preferences, contacts, routines, and what you worked on together.
+    Notes are stored as simple text files on the user's PC — private and local.
+
+    Args:
+        filename: Name for the note file (e.g., "preferences", "contacts", "session-2_12_26")
+        content: What to save (plain text)
+    """
+    if not filename.strip():
+        return "I need a name for this note. What should I call it?"
+    if not content.strip():
+        return "The note is empty. What would you like me to save?"
+
+    NOTES_DIR.mkdir(parents=True, exist_ok=True)
+
+    if not filename.endswith(".md"):
+        filename += ".md"
+
+    # Sanitize filename
+    safe_name = re.sub(r'[^\w\s\-.]', '', filename)
+    if not safe_name:
+        safe_name = "note.md"
+
+    filepath = NOTES_DIR / safe_name
+
+    with open(filepath, "a", encoding="utf-8") as f:
+        f.write(f"\n---\n_Updated: {datetime.now().strftime('%B %d, %Y at %I:%M %p')}_\n\n")
+        f.write(content.strip() + "\n")
+
+    return f"Saved to {filepath.name}. This note is stored safely on your computer — not in the cloud."
+
+
+@mcp.tool()
+def read_notes(filename: str = "") -> str:
+    """Read a note file from the user's computer, or list all available notes.
+    Use to recall what you know about the user — their preferences, contacts, past sessions.
+
+    Args:
+        filename: Name of the note to read (e.g., "preferences", "contacts"). Leave empty to list all notes.
+    """
+    if not NOTES_DIR.exists():
+        return "No notes yet — this looks like our first time working together!"
+
+    if not filename.strip():
+        files = sorted(NOTES_DIR.glob("*.md"), key=lambda f: f.stat().st_mtime, reverse=True)
+        if not files:
+            return "No notes saved yet."
+        lines = ["Here are the notes I have saved on your computer:\n"]
+        for f in files:
+            modified = datetime.fromtimestamp(f.stat().st_mtime).strftime("%B %d, %Y")
+            lines.append(f"  - {f.name} (last updated {modified})")
+        return "\n".join(lines)
+
+    if not filename.endswith(".md"):
+        filename += ".md"
+
+    filepath = NOTES_DIR / filename
+    if not filepath.exists():
+        return f"I don't have a note called '{filename}'. Would you like me to create one?"
+
+    text = filepath.read_text(encoding="utf-8")
+    if len(text) > 3000:
+        text = text[:3000] + "\n\n... (note continues)"
+    return f"=== {filename} ===\n{text}"
+
+
+@mcp.tool()
+def recall_user_context() -> str:
+    """Remember what you know about this person by reading saved notes.
+    Call this at the start of each conversation to restore context.
+    Reads preferences, contacts, and the most recent session notes.
+    """
+    if not NOTES_DIR.exists():
+        return "No notes yet — this is our first conversation! I'll start keeping notes about what we work on together."
+
+    files = sorted(NOTES_DIR.glob("*.md"), key=lambda f: f.stat().st_mtime, reverse=True)
+    if not files:
+        return "No notes yet — this is our first conversation!"
+
+    context_parts = []
+
+    # Read preferences and contacts first (most important)
+    for priority in ["preferences.md", "contacts.md"]:
+        pf = NOTES_DIR / priority
+        if pf.exists():
+            context_parts.append(f"=== {priority} ===\n{pf.read_text(encoding='utf-8')[:2000]}")
+
+    # Then most recent session file
+    session_files = [f for f in files if f.name.startswith("session-")]
+    if session_files:
+        latest = session_files[0]
+        context_parts.append(f"=== {latest.name} (most recent) ===\n{latest.read_text(encoding='utf-8')[:2000]}")
+
+    # List all available note files
+    context_parts.append(f"\nAll note files: {', '.join(f.name for f in files)}")
+
+    return "\n\n".join(context_parts)
 
 
 if __name__ == "__main__":

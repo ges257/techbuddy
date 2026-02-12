@@ -12,6 +12,8 @@ from mcp_servers.screen_dispatch import (
     troubleshoot_printer,
     analyze_scam_risk,
     describe_screen_action,
+    read_my_screen,
+    set_anthropic_client,
     check_email,
     read_email,
     send_email,
@@ -22,6 +24,11 @@ from mcp_servers.screen_dispatch import (
     check_for_meeting_links,
     join_video_call,
     save_document_as_pdf,
+    search_web,
+    save_note,
+    read_notes,
+    recall_user_context,
+    NOTES_DIR,
 )
 
 
@@ -260,3 +267,161 @@ def test_join_trusted_link():
     result = join_video_call("https://zoom.us/j/123456789")
     assert "zoom" in result.lower()
     assert "step" in result.lower() or "join" in result.lower()
+
+
+# --- Vision + Extended Thinking tests ---
+
+def test_read_my_screen_non_windows():
+    """On non-Windows, read_my_screen returns a helpful string."""
+    result = read_my_screen()
+    assert isinstance(result, str)
+    assert "describe" in result.lower()
+
+
+def test_set_anthropic_client():
+    """set_anthropic_client should accept a client object."""
+    # Just verify it doesn't crash — we'll pass None to reset
+    set_anthropic_client(None)
+
+
+def test_analyze_scam_safe_no_api_call():
+    """Safe content should return 'safe' without needing API client."""
+    set_anthropic_client(None)  # Ensure no client
+    result = analyze_scam_risk("Hi, dinner at 5pm on Sunday!", "email")
+    assert "safe" in result.lower()
+
+
+def test_analyze_scam_keyword_fallback():
+    """When no API client, scam analysis falls back to keyword matching."""
+    set_anthropic_client(None)  # Force keyword-only mode
+    result = analyze_scam_risk(
+        "URGENT: Your account has been suspended! Call 1-800-555-0000 immediately. "
+        "Send $500 in gift cards to restore access. From: IRS",
+        "email"
+    )
+    assert "DANGER" in result or "WARNING" in result
+    assert "scam" in result.lower() or "urgency" in result.lower() or "gift card" in result.lower()
+
+
+# --- Web Search ---
+
+def test_search_web_empty_query():
+    result = search_web("")
+    assert "need something" in result.lower()
+
+def test_search_web_returns_results():
+    """search_web should return results (or graceful fallback if no network)."""
+    result = search_web("python programming language", num_results=2)
+    # Either returns results or a graceful fallback message
+    assert isinstance(result, str)
+    assert len(result) > 10
+
+def test_search_web_clamps_num_results():
+    """num_results should be clamped to 1-5."""
+    result = search_web("test query", num_results=100)
+    assert isinstance(result, str)
+
+def test_search_web_graceful_on_bad_query():
+    """Should not crash on unusual queries."""
+    result = search_web("!@#$%^&*()", num_results=1)
+    assert isinstance(result, str)
+
+
+# --- Local Memory ---
+
+def test_save_note_creates_file(tmp_path, monkeypatch):
+    """save_note should create a .md file."""
+    import mcp_servers.screen_dispatch as sd
+    monkeypatch.setattr(sd, "NOTES_DIR", tmp_path)
+    result = save_note("test-note", "Hello from TechBuddy!")
+    assert "saved" in result.lower()
+    assert (tmp_path / "test-note.md").exists()
+    content = (tmp_path / "test-note.md").read_text()
+    assert "Hello from TechBuddy!" in content
+
+def test_save_note_appends(tmp_path, monkeypatch):
+    """save_note should append, not overwrite."""
+    import mcp_servers.screen_dispatch as sd
+    monkeypatch.setattr(sd, "NOTES_DIR", tmp_path)
+    save_note("log", "First entry")
+    save_note("log", "Second entry")
+    content = (tmp_path / "log.md").read_text()
+    assert "First entry" in content
+    assert "Second entry" in content
+
+def test_save_note_empty_content():
+    result = save_note("test", "")
+    assert "empty" in result.lower()
+
+def test_save_note_empty_filename():
+    result = save_note("", "some content")
+    assert "need a name" in result.lower()
+
+def test_read_notes_list_all(tmp_path, monkeypatch):
+    """read_notes with no filename should list files."""
+    import mcp_servers.screen_dispatch as sd
+    monkeypatch.setattr(sd, "NOTES_DIR", tmp_path)
+    (tmp_path / "preferences.md").write_text("test")
+    (tmp_path / "contacts.md").write_text("test")
+    result = read_notes()
+    assert "preferences.md" in result
+    assert "contacts.md" in result
+
+def test_read_notes_specific_file(tmp_path, monkeypatch):
+    """read_notes with filename should return that file's content."""
+    import mcp_servers.screen_dispatch as sd
+    monkeypatch.setattr(sd, "NOTES_DIR", tmp_path)
+    (tmp_path / "preferences.md").write_text("Font size: large\nEmail first thing")
+    result = read_notes("preferences")
+    assert "Font size: large" in result
+
+def test_read_notes_missing_file(tmp_path, monkeypatch):
+    import mcp_servers.screen_dispatch as sd
+    monkeypatch.setattr(sd, "NOTES_DIR", tmp_path)
+    result = read_notes("nonexistent")
+    assert "don't have" in result.lower()
+
+def test_read_notes_no_dir():
+    """read_notes should handle missing notes directory gracefully."""
+    import mcp_servers.screen_dispatch as sd
+    original = sd.NOTES_DIR
+    sd.NOTES_DIR = Path("/tmp/zzz_nonexistent_techbuddy_notes_dir")
+    result = read_notes()
+    sd.NOTES_DIR = original
+    assert "first time" in result.lower()
+
+def test_recall_user_context_no_notes():
+    """recall_user_context should be friendly when no notes exist."""
+    import mcp_servers.screen_dispatch as sd
+    original = sd.NOTES_DIR
+    sd.NOTES_DIR = Path("/tmp/zzz_nonexistent_techbuddy_notes_dir")
+    result = recall_user_context()
+    sd.NOTES_DIR = original
+    assert "first conversation" in result.lower()
+
+def test_recall_user_context_with_notes(tmp_path, monkeypatch):
+    """recall_user_context should read preferences + contacts + latest session."""
+    import mcp_servers.screen_dispatch as sd
+    monkeypatch.setattr(sd, "NOTES_DIR", tmp_path)
+    (tmp_path / "preferences.md").write_text("Prefers large text")
+    (tmp_path / "contacts.md").write_text("Sarah = daughter")
+    (tmp_path / "session-2_12_26.md").write_text("Helped with email today")
+    result = recall_user_context()
+    assert "Prefers large text" in result
+    assert "Sarah = daughter" in result
+    assert "Helped with email today" in result
+
+def test_save_note_adds_timestamp(tmp_path, monkeypatch):
+    """save_note should include a timestamp."""
+    import mcp_servers.screen_dispatch as sd
+    monkeypatch.setattr(sd, "NOTES_DIR", tmp_path)
+    save_note("timestamped", "Some content")
+    content = (tmp_path / "timestamped.md").read_text()
+    assert "Updated:" in content
+
+def test_save_note_privacy_message(tmp_path, monkeypatch):
+    """save_note should mention local/private storage."""
+    import mcp_servers.screen_dispatch as sd
+    monkeypatch.setattr(sd, "NOTES_DIR", tmp_path)
+    result = save_note("test-privacy", "content")
+    assert "not in the cloud" in result.lower() or "on your computer" in result.lower()

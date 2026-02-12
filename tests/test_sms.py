@@ -90,7 +90,7 @@ def test_destructive_keywords_exist():
 def test_simulate_endpoint_returns_json():
     client = _get_client()
     with patch("frontend.app.call_claude") as mock_claude:
-        mock_claude.return_value = ("Hi Sarah, the printer looks fine!", [])
+        mock_claude.return_value = ("Hi Sarah, the printer looks fine!", "", [])
         resp = client.post("/sms/simulate", json={
             "from_number": "+15551234567",
             "message": "mom says printer isnt working",
@@ -106,7 +106,7 @@ def test_simulate_pushes_to_pending():
     _pending_family_messages.clear()
     client = _get_client()
     with patch("frontend.app.call_claude") as mock_claude:
-        mock_claude.return_value = ("Done! I checked the inbox.", [])
+        mock_claude.return_value = ("Done! I checked the inbox.", "", [])
         client.post("/sms/simulate", json={
             "from_number": "+15551234567",
             "message": "check moms email",
@@ -144,7 +144,7 @@ def test_sms_incoming_empty_body():
 def test_sms_incoming_returns_twiml():
     client = _get_client()
     with patch("frontend.app.call_claude") as mock_claude:
-        mock_claude.return_value = ("Hi Sarah, everything looks good!", [])
+        mock_claude.return_value = ("Hi Sarah, everything looks good!", "", [])
         resp = client.post("/sms/incoming", data={
             "From": "+15551234567",
             "Body": "check on mom",
@@ -196,7 +196,7 @@ def test_sms_log_records_interactions():
     _family_sms_log.clear()
     sarah = FAMILY_CONTACTS["+15551234567"]
     with patch("frontend.app.call_claude") as mock_claude:
-        mock_claude.return_value = ("Printer is fine.", [])
+        mock_claude.return_value = ("Printer is fine.", "", [])
         process_family_sms(sarah, "check printer")
     assert len(_family_sms_log) >= 1
     entry = _family_sms_log[-1]

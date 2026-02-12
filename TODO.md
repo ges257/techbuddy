@@ -31,14 +31,31 @@
 - [x] Real Zoom PMI link (367 817 4163) in Dr. Johnson email
 - [x] Tests: 64/64 passing
 - [x] All work committed and pushed (c423265)
+- [x] Family SMS Remote Control: demo panel, authorization, polling, Twilio webhook (e026297)
+- [x] Tests: 80/80 passing
 - [ ] End-to-end integration testing on Windows
 - [ ] Polish + edge cases
 
+## Day 3 (Feb 12-13) — Opus 4.6 Power Features
+- [x] Prompt caching (cache_control on system message)
+- [x] Extended thinking on main call_claude() loop (budget_tokens: 8000)
+- [x] UI: collapsible thinking trace display
+- [x] Vision: read_my_screen() tool (PIL screenshot → Claude Vision)
+- [x] Extended thinking for scam analysis (inner API call with thinking)
+- [x] Web search: search_web() via DuckDuckGo (no API key needed)
+- [x] Web-verified scam analysis: _web_verify_scam() auto-checks orgs/phones/domains
+- [x] Date awareness: _build_system_prompt() injects today's date
+- [x] Local memory: save_note(), read_notes(), recall_user_context() — .md notes on user's PC
+- [x] Tests: 117/117 passing (92 → 117)
+- [ ] End-to-end Windows testing (all features including vision + thinking + web search + memory)
+- [ ] UI polish (loading states, branding, thinking display)
+
 ## Day 4 (Feb 15) — Demo + Polish
+- [ ] README.md for judges
+- [ ] LICENSE (MIT) + .env.example
 - [ ] Progressive demo: story layer → API layer → wow layer → architecture layer
 - [ ] OBS backup recording
-- [ ] Accessibility audit (full checklist)
-- [ ] README for judges
+- [ ] Written summary (100-200 words)
 
 ## Day 5 (Feb 16) — Submit by 3pm EST
 - [ ] Final demo recording

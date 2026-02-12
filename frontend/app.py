@@ -1,4 +1,5 @@
 import os
+import re
 import sys
 from datetime import datetime
 from pathlib import Path
@@ -27,6 +28,7 @@ from mcp_servers.screen_dispatch import (
     type_text,
     save_document_as_pdf,
     describe_screen_action,
+    read_my_screen,
     check_email,
     read_email,
     send_email,
@@ -36,12 +38,20 @@ from mcp_servers.screen_dispatch import (
     share_photo,
     check_for_meeting_links,
     join_video_call,
+    set_anthropic_client,
+    search_web,
+    save_note,
+    read_notes,
+    recall_user_context,
 )
 
 app = Flask(__name__)
 app.secret_key = os.urandom(24)
 
 client = anthropic.Anthropic()
+
+# Share the client with screen_dispatch for extended thinking (scam analysis, vision)
+set_anthropic_client(client)
 
 # --- Family SMS Remote Control ---
 # Authorized family contacts — phone number → profile
@@ -66,7 +76,9 @@ FAMILY_CONTACTS = {
 _pending_family_messages = []
 _family_sms_log = []
 
-SYSTEM_PROMPT = """You are TechBuddy, a warm and patient AI assistant that helps elderly people use their computer.
+_SYSTEM_PROMPT_BASE = """You are TechBuddy, a warm and patient AI assistant that helps elderly people use their computer.
+
+TODAY'S DATE: {today_date}
 
 PERSONALITY:
 - Speak like a friendly, patient neighbor — never like a tech manual.
@@ -88,6 +100,21 @@ CAPABILITIES (use the tools provided):
 - Click buttons: use click_button to press buttons in apps (Windows)
 - Type text: use type_text to fill in fields in apps (Windows)
 - Step-by-step help: use describe_screen_action for Zoom, email, etc.
+- See their screen: use read_my_screen to look at what's on their screen (popups, errors, etc.)
+
+SEARCHING THE WEB:
+- Use search_web to look up info — phone numbers, organizations, scam reports, general knowledge
+- Include the current year to get fresh results
+- Summarize results in simple language — never show raw URLs to the user
+- During scam analysis, web verification happens automatically
+
+LOCAL MEMORY (stored on their computer, NOT in the cloud):
+- At the start of each conversation, call recall_user_context() to remember this person
+- Save observations: "User prefers large text", "Daughter Sarah visits on Sundays", "Doctor is Dr. Johnson"
+- Use save_note("preferences", "...") for preferences, save_note("contacts", "...") for people
+- Use save_note("session-{session_date}", "...") for what you worked on today
+- Files are plain text on their PC — family can read them anytime
+- NEVER store passwords, financial info, or sensitive data in notes
 
 SCAM PROTECTION (CRITICAL — elderly Americans lost $4.8 BILLION to scams in 2024):
 - Use analyze_scam_risk on ANY content that seems suspicious — emails, links, phone claims, popups
@@ -101,6 +128,7 @@ SCAM PROTECTION (CRITICAL — elderly Americans lost $4.8 BILLION to scams in 20
 - If the user describes a popup saying "virus detected" or "call this number" — IMMEDIATELY warn this is a scam
 - If someone claims to be from the government demanding money — it's a scam, period
 - If asked to install TeamViewer, AnyDesk, or give remote access — STOP and warn
+- When analyzing scams, web verification automatically checks organizations and phone numbers online
 
 FAMILY SMS REMOTE CONTROL:
 When you receive a message tagged [FAMILY REMOTE REQUEST], a family member is texting via SMS to help their parent.
@@ -120,6 +148,14 @@ RULES:
 - Use warm greetings: "Hi there!" not "Hello, how may I assist you today?"
 - USE YOUR TOOLS when the user asks for help with files, printing, or apps. Don't just describe — actually do it.
 """
+
+
+def _build_system_prompt() -> str:
+    """Build the system prompt with today's date injected."""
+    now = datetime.now()
+    today_date = now.strftime("%A, %B %d, %Y")
+    session_date = now.strftime("%-m_%-d_%y")
+    return _SYSTEM_PROMPT_BASE.format(today_date=today_date, session_date=session_date)
 
 # Tool definitions for Claude API
 TOOLS = [
@@ -248,6 +284,14 @@ TOOLS = [
         },
     },
     {
+        "name": "read_my_screen",
+        "description": "Take a screenshot of the user's screen so you can SEE what they see. Use when they say 'what's on my screen?', 'I see a popup', 'something appeared', 'what does this error say?', 'what should I click?', or 'I don't know what I'm looking at'. This lets you actually look at their screen and give specific help.",
+        "input_schema": {
+            "type": "object",
+            "properties": {},
+        },
+    },
+    {
         "name": "check_email",
         "description": "Check the email inbox. Shows recent emails with who sent them and what they're about. Use when the user says 'check my email' or 'do I have messages?'",
         "input_schema": {
@@ -345,6 +389,48 @@ TOOLS = [
             "required": ["meeting_link"],
         },
     },
+    {
+        "name": "search_web",
+        "description": "Search the internet for information. Use when you need to look something up — phone numbers, organizations, how-to info, scam reports, or anything the user asks about. Always summarize results in simple language.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "query": {"type": "string", "description": "What to search for (e.g., 'IRS phone number', 'CVS pharmacy hours')"},
+                "num_results": {"type": "integer", "description": "How many results (1-5)", "default": 3},
+            },
+            "required": ["query"],
+        },
+    },
+    {
+        "name": "save_note",
+        "description": "Save a note about the user on their computer. Use to remember preferences, contacts, routines, and session history. Notes are private — stored locally, never in the cloud.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "filename": {"type": "string", "description": "Note name (e.g., 'preferences', 'contacts', 'session-2_12_26')"},
+                "content": {"type": "string", "description": "What to save (plain text)"},
+            },
+            "required": ["filename", "content"],
+        },
+    },
+    {
+        "name": "read_notes",
+        "description": "Read a saved note file, or list all available notes. Use to recall what you know about this person.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "filename": {"type": "string", "description": "Note to read (e.g., 'preferences'). Leave empty to list all.", "default": ""},
+            },
+        },
+    },
+    {
+        "name": "recall_user_context",
+        "description": "Remember what you know about this person by reading saved notes. Call this at the start of each conversation to restore context — preferences, contacts, and recent session history.",
+        "input_schema": {
+            "type": "object",
+            "properties": {},
+        },
+    },
 ]
 
 # Map tool names to actual functions
@@ -360,6 +446,7 @@ TOOL_FUNCTIONS = {
     "type_text": type_text,
     "save_document_as_pdf": save_document_as_pdf,
     "describe_screen_action": describe_screen_action,
+    "read_my_screen": read_my_screen,
     "check_email": check_email,
     "read_email": read_email,
     "send_email": send_email,
@@ -369,11 +456,19 @@ TOOL_FUNCTIONS = {
     "share_photo": share_photo,
     "check_for_meeting_links": check_for_meeting_links,
     "join_video_call": join_video_call,
+    "search_web": search_web,
+    "save_note": save_note,
+    "read_notes": read_notes,
+    "recall_user_context": recall_user_context,
 }
 
 
-def execute_tool(name: str, input_data: dict) -> str:
-    """Execute a dispatch tool and return its result."""
+def execute_tool(name: str, input_data: dict) -> str | list:
+    """Execute a dispatch tool and return its result.
+
+    Returns either a string (most tools) or a list of content blocks
+    (vision tool returns image + text).
+    """
     func = TOOL_FUNCTIONS.get(name)
     if not func:
         return f"Unknown tool: {name}"
@@ -396,22 +491,43 @@ def serialize_content(content) -> list[dict]:
                 "name": block.name,
                 "input": block.input,
             })
+        elif block.type == "thinking":
+            result.append({"type": "thinking", "thinking": block.thinking})
     return result
 
 
-def call_claude(history: list) -> tuple[str, list]:
-    """Call Claude API with tool use. Returns (final_text, updated_history).
+def _extract_tool_thinking(text: str) -> str:
+    """Extract thinking trace from tool result markers."""
+    match = re.search(r'\[THINKING_TRACE\](.*?)\[/THINKING_TRACE\]', text, re.DOTALL)
+    return match.group(1) if match else ""
 
-    Handles the tool-use loop: Claude may request tools, we execute them
-    and feed results back, repeating until Claude gives a text response.
+
+def _strip_tool_thinking(text: str) -> str:
+    """Remove thinking trace markers from text."""
+    return re.sub(r'\[THINKING_TRACE\].*?\[/THINKING_TRACE\]', '', text, flags=re.DOTALL).strip()
+
+
+def call_claude(history: list) -> tuple[str, str, list]:
+    """Call Claude API with tool use and extended thinking.
+
+    Returns (final_text, thinking_text, updated_history).
+
+    Uses extended thinking so Claude reasons before responding.
+    Uses prompt caching for the system prompt.
+    Handles structured tool results (vision returns image content blocks).
     """
     MAX_TOOL_ROUNDS = 5
 
     for _ in range(MAX_TOOL_ROUNDS):
         response = client.messages.create(
             model="claude-opus-4-6",
-            max_tokens=1024,
-            system=SYSTEM_PROMPT,
+            max_tokens=16000,
+            thinking={"type": "adaptive"},
+            system=[{
+                "type": "text",
+                "text": _build_system_prompt(),
+                "cache_control": {"type": "ephemeral"},
+            }],
             tools=TOOLS,
             messages=history,
         )
@@ -427,25 +543,37 @@ def call_claude(history: list) -> tuple[str, list]:
         tool_uses = [b for b in assistant_content if b.type == "tool_use"]
 
         if not tool_uses:
-            # No tools — extract text and return
+            # No tools — extract text and thinking, then return
             text_blocks = [b.text for b in assistant_content if b.type == "text"]
-            return " ".join(text_blocks) if text_blocks else "Done!", history
+            thinking_blocks = [b.thinking for b in assistant_content if b.type == "thinking"]
+            reply_text = " ".join(text_blocks) if text_blocks else "Done!"
+            thinking_text = "\n".join(thinking_blocks) if thinking_blocks else ""
+            return reply_text, thinking_text, history
 
         # Execute each tool and build tool results
         tool_results = []
         for tool_use in tool_uses:
             result = execute_tool(tool_use.name, tool_use.input)
-            tool_results.append({
-                "type": "tool_result",
-                "tool_use_id": tool_use.id,
-                "content": result,
-            })
+
+            # Handle structured content (vision tool returns list of blocks)
+            if isinstance(result, list):
+                tool_results.append({
+                    "type": "tool_result",
+                    "tool_use_id": tool_use.id,
+                    "content": result,
+                })
+            else:
+                tool_results.append({
+                    "type": "tool_result",
+                    "tool_use_id": tool_use.id,
+                    "content": result,
+                })
 
         # Feed results back to Claude
         history.append({"role": "user", "content": tool_results})
 
     # If we hit max rounds, return what we have
-    return "I'm still working on that. Could you tell me more about what you need?", history
+    return "I'm still working on that. Could you tell me more about what you need?", "", history
 
 
 @app.route("/")
@@ -465,8 +593,9 @@ def chat():
     history = session.get("history", [])
     history.append({"role": "user", "content": user_message})
 
+    thinking_text = ""
     try:
-        assistant_text, history = call_claude(history)
+        assistant_text, thinking_text, history = call_claude(history)
     except anthropic.AuthenticationError:
         assistant_text = "I'm having trouble connecting right now. Let's try again in a moment."
         history.append({"role": "assistant", "content": assistant_text})
@@ -474,9 +603,19 @@ def chat():
         assistant_text = "Something went wrong on my end. Let's try that again."
         history.append({"role": "assistant", "content": assistant_text})
 
+    # Extract thinking traces embedded in tool results (scam analysis)
+    tool_thinking = _extract_tool_thinking(assistant_text)
+    if tool_thinking:
+        assistant_text = _strip_tool_thinking(assistant_text)
+        if not thinking_text:
+            thinking_text = tool_thinking
+
     session["history"] = history
 
-    return jsonify({"reply": assistant_text})
+    response_data = {"reply": assistant_text}
+    if thinking_text:
+        response_data["thinking"] = thinking_text
+    return jsonify(response_data)
 
 
 # --- Family SMS Remote Control ---
@@ -518,7 +657,7 @@ def process_family_sms(contact: dict, message: str) -> str:
     history = [{"role": "user", "content": context_prefix}]
 
     try:
-        assistant_text, history = call_claude(history)
+        assistant_text, _, history = call_claude(history)
     except Exception:
         assistant_text = (
             f"Hi {name}, I had trouble with that request. "

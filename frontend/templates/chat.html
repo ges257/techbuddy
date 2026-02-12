@@ -332,6 +332,48 @@
         .sms-reply strong {
             color: #7B1FA2;
         }
+
+        /* Thinking trace (collapsible) */
+        .thinking-trace {
+            margin-top: 8px;
+            border: 1px solid #E0E0E0;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .thinking-trace-toggle {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 12px;
+            background: #F5F5F5;
+            cursor: pointer;
+            font-size: 14px;
+            color: #777;
+            border: none;
+            width: 100%;
+            text-align: left;
+        }
+
+        .thinking-trace-toggle:hover {
+            background: #EEEEEE;
+        }
+
+        .thinking-trace-content {
+            display: none;
+            padding: 12px;
+            font-size: 14px;
+            color: #555;
+            line-height: 1.5;
+            background: #FAFAFA;
+            white-space: pre-wrap;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .thinking-trace-content.expanded {
+            display: block;
+        }
     </style>
 </head>
 <body>
@@ -394,7 +436,7 @@
             }
         });
 
-        function addMessage(text, role) {
+        function addMessage(text, role, thinking) {
             // Remove welcome message on first interaction
             if (firstMessage) {
                 const welcome = messagesEl.querySelector('.welcome');
@@ -414,10 +456,36 @@
 
             div.appendChild(label);
             div.appendChild(body);
+
+            // Add thinking trace if present (collapsible)
+            if (thinking && role === 'assistant') {
+                const traceDiv = document.createElement('div');
+                traceDiv.className = 'thinking-trace';
+
+                const toggle = document.createElement('button');
+                toggle.className = 'thinking-trace-toggle';
+                toggle.textContent = 'See what I was considering...';
+                toggle.onclick = function() {
+                    const content = this.nextElementSibling;
+                    content.classList.toggle('expanded');
+                    this.textContent = content.classList.contains('expanded')
+                        ? 'Hide my reasoning'
+                        : 'See what I was considering...';
+                };
+
+                const content = document.createElement('div');
+                content.className = 'thinking-trace-content';
+                content.textContent = thinking;
+
+                traceDiv.appendChild(toggle);
+                traceDiv.appendChild(content);
+                div.appendChild(traceDiv);
+            }
+
             messagesEl.appendChild(div);
             messagesEl.scrollTop = messagesEl.scrollHeight;
 
-            // Auto-speak TechBuddy responses
+            // Auto-speak TechBuddy responses (only the reply, not thinking)
             if (role === 'assistant') {
                 speakText(text);
             }
@@ -440,7 +508,7 @@
                     body: JSON.stringify({ message: text })
                 });
                 const data = await res.json();
-                addMessage(data.reply, 'assistant');
+                addMessage(data.reply, 'assistant', data.thinking || '');
             } catch (err) {
                 addMessage("Something went wrong. Let's try again.", 'assistant');
             } finally {
