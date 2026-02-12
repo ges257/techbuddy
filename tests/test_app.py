@@ -39,6 +39,6 @@ def test_execute_tool_unknown():
     assert "Unknown tool" in result
 
 def test_execute_tool_find_file():
-    result = execute_tool("find_file", {"name": "zzz_nonexistent_xyz"})
+    result = execute_tool("find_file", {"name": "zzz_nonexistent_xyz", "search_in": "/tmp"})
     assert isinstance(result, str)
     assert "couldn't find" in result.lower()

@@ -23,7 +23,27 @@ from mcp.server.fastmcp import FastMCP
 
 # Detect platform
 IS_WINDOWS = platform.system() == "Windows"
+IS_WSL = not IS_WINDOWS and Path("/mnt/c/Users").exists()
 HOME = Path.home()
+
+# On WSL, use the Windows user folder for file search so we find real files
+if IS_WSL:
+    # Find the Windows username (first non-system folder in /mnt/c/Users/)
+    _skip = {"All Users", "Default", "Default User", "Public", "desktop.ini"}
+    _win_users = [p for p in Path("/mnt/c/Users").iterdir()
+                  if p.is_dir() and p.name not in _skip]
+    WIN_HOME = _win_users[0] if _win_users else HOME
+else:
+    WIN_HOME = HOME
+
+# Standard user folders — use Windows paths on WSL, home paths elsewhere
+USER_FOLDERS = [
+    WIN_HOME / "Desktop",
+    WIN_HOME / "Documents",
+    WIN_HOME / "Downloads",
+    WIN_HOME / "Pictures",
+    WIN_HOME / "Videos",
+]
 
 mcp = FastMCP("screen-dispatch")
 
@@ -31,6 +51,32 @@ mcp = FastMCP("screen-dispatch")
 # ---------------------------------------------------------------------------
 # Tier 1: Direct API / subprocess — works on any OS for file/system ops
 # ---------------------------------------------------------------------------
+
+def _search_matches(path: Path, name_lower: str, results: list, max_results: int,
+                     depth: int = 0, max_depth: int = 3):
+    """Recursively search for files matching name, with depth limit."""
+    if len(results) >= max_results:
+        return
+    try:
+        if path.is_file():
+            if name_lower in path.name.lower():
+                stat = path.stat()
+                modified = datetime.fromtimestamp(stat.st_mtime)
+                results.append({
+                    "path": str(path),
+                    "name": path.name,
+                    "folder": str(path.parent),
+                    "modified": modified.strftime("%B %d, %Y at %I:%M %p"),
+                    "size_kb": round(stat.st_size / 1024, 1),
+                })
+        elif path.is_dir() and depth < max_depth and not path.name.startswith("."):
+            for child in path.iterdir():
+                _search_matches(child, name_lower, results, max_results, depth + 1, max_depth)
+                if len(results) >= max_results:
+                    return
+    except (PermissionError, OSError):
+        pass
+
 
 @mcp.tool()
 def find_file(name: str, search_in: str = "common") -> str:
@@ -44,37 +90,25 @@ def find_file(name: str, search_in: str = "common") -> str:
     results = []
 
     if search_in == "common":
-        search_dirs = [
-            HOME / "Desktop",
-            HOME / "Documents",
-            HOME / "Downloads",
-            HOME / "Pictures",
-            HOME / "Videos",
-        ]
+        search_dirs = list(USER_FOLDERS)
         # On Windows, also check OneDrive
-        if IS_WINDOWS:
-            onedrive = HOME / "OneDrive"
-            if onedrive.exists():
-                search_dirs.append(onedrive)
+        onedrive = WIN_HOME / "OneDrive"
+        if onedrive.exists():
+            search_dirs.append(onedrive)
     else:
         search_dirs = [Path(search_in)]
+
+    MAX_DEPTH = 3  # Don't crawl too deep — slow over WSL bridge
+    MAX_RESULTS = 50
 
     for search_dir in search_dirs:
         if not search_dir.exists():
             continue
-        pattern = f"**/*{name}*"
         try:
-            for match in search_dir.glob(pattern):
-                if match.is_file():
-                    stat = match.stat()
-                    modified = datetime.fromtimestamp(stat.st_mtime)
-                    results.append({
-                        "path": str(match),
-                        "name": match.name,
-                        "folder": str(match.parent),
-                        "modified": modified.strftime("%B %d, %Y at %I:%M %p"),
-                        "size_kb": round(stat.st_size / 1024, 1),
-                    })
+            for match in search_dir.iterdir():
+                _search_matches(match, name.lower(), results, MAX_RESULTS, depth=0, max_depth=MAX_DEPTH)
+                if len(results) >= MAX_RESULTS:
+                    break
         except PermissionError:
             continue
 
@@ -117,33 +151,38 @@ def find_recent_files(hours: int = 24, file_type: str = "all") -> str:
     }
     allowed_ext = type_extensions.get(file_type)
 
-    search_dirs = [
-        HOME / "Desktop",
-        HOME / "Documents",
-        HOME / "Downloads",
-        HOME / "Pictures",
-    ]
+    search_dirs = list(USER_FOLDERS)
+
+    def _search_recent(path: Path, depth: int = 0, max_depth: int = 3):
+        if len(results) >= 50:
+            return
+        try:
+            if path.is_file():
+                if path.name.startswith("."):
+                    return
+                if allowed_ext and path.suffix.lower() not in allowed_ext:
+                    return
+                stat = path.stat()
+                modified = datetime.fromtimestamp(stat.st_mtime)
+                if modified >= cutoff:
+                    results.append({
+                        "path": str(path),
+                        "name": path.name,
+                        "folder": str(path.parent),
+                        "modified": modified.strftime("%B %d, %Y at %I:%M %p"),
+                    })
+            elif path.is_dir() and depth < max_depth and not path.name.startswith("."):
+                for child in path.iterdir():
+                    _search_recent(child, depth + 1, max_depth)
+        except (PermissionError, OSError):
+            pass
 
     for search_dir in search_dirs:
         if not search_dir.exists():
             continue
         try:
-            for match in search_dir.rglob("*"):
-                if not match.is_file():
-                    continue
-                if match.name.startswith("."):
-                    continue
-                if allowed_ext and match.suffix.lower() not in allowed_ext:
-                    continue
-                stat = match.stat()
-                modified = datetime.fromtimestamp(stat.st_mtime)
-                if modified >= cutoff:
-                    results.append({
-                        "path": str(match),
-                        "name": match.name,
-                        "folder": str(match.parent),
-                        "modified": modified.strftime("%B %d, %Y at %I:%M %p"),
-                    })
+            for item in search_dir.iterdir():
+                _search_recent(item)
         except PermissionError:
             continue
 
@@ -195,10 +234,10 @@ def list_folder(folder_path: str = "Desktop") -> str:
         folder_path: Which folder to look in — "Desktop", "Documents", "Downloads", "Pictures", or a full path
     """
     shortcuts = {
-        "Desktop": HOME / "Desktop",
-        "Documents": HOME / "Documents",
-        "Downloads": HOME / "Downloads",
-        "Pictures": HOME / "Pictures",
+        "Desktop": WIN_HOME / "Desktop",
+        "Documents": WIN_HOME / "Documents",
+        "Downloads": WIN_HOME / "Downloads",
+        "Pictures": WIN_HOME / "Pictures",
     }
 
     path = shortcuts.get(folder_path, Path(folder_path))
@@ -613,48 +652,54 @@ PHOTO_EXTENSIONS = {".jpg", ".jpeg", ".png", ".gif", ".bmp", ".tiff", ".heic", "
 
 
 @mcp.tool()
-def find_photos(search_term: str = "", days_back: int = 0) -> str:
+def find_photos(search_term: str = "", days_back: int = 0, search_in: str = "common") -> str:
     """Find photos on the computer. Search by name or find recent photos.
     Use when the user says "find my photos" or "where are my vacation pictures?"
 
     Args:
         search_term: What to search for (e.g., "vacation", "christmas", "grandkids"). Leave empty to find all recent photos.
         days_back: How many days back to look (0 = search by name only)
+        search_in: Where to search — "common" for standard folders, or a specific path
     """
     results = []
-    search_dirs = [
-        HOME / "Pictures",
-        HOME / "Desktop",
-        HOME / "Documents",
-        HOME / "Downloads",
-    ]
+    search_dirs = list(USER_FOLDERS) if search_in == "common" else [Path(search_in)]
 
     cutoff = None
     if days_back > 0:
         cutoff = datetime.now() - timedelta(days=days_back)
 
+    def _search_photos(path: Path, depth: int = 0, max_depth: int = 3):
+        if len(results) >= 50:
+            return
+        try:
+            if path.is_file():
+                if path.suffix.lower() not in PHOTO_EXTENSIONS:
+                    return
+                if search_term and search_term.lower() not in path.name.lower():
+                    return
+                stat = path.stat()
+                modified = datetime.fromtimestamp(stat.st_mtime)
+                if cutoff and modified < cutoff:
+                    return
+                results.append({
+                    "path": str(path),
+                    "name": path.name,
+                    "folder": str(path.parent),
+                    "modified": modified.strftime("%B %d, %Y at %I:%M %p"),
+                    "size_kb": round(stat.st_size / 1024, 1),
+                })
+            elif path.is_dir() and depth < max_depth and not path.name.startswith("."):
+                for child in path.iterdir():
+                    _search_photos(child, depth + 1, max_depth)
+        except (PermissionError, OSError):
+            pass
+
     for search_dir in search_dirs:
         if not search_dir.exists():
             continue
         try:
-            for match in search_dir.rglob("*"):
-                if not match.is_file():
-                    continue
-                if match.suffix.lower() not in PHOTO_EXTENSIONS:
-                    continue
-                if search_term and search_term.lower() not in match.name.lower():
-                    continue
-                stat = match.stat()
-                modified = datetime.fromtimestamp(stat.st_mtime)
-                if cutoff and modified < cutoff:
-                    continue
-                results.append({
-                    "path": str(match),
-                    "name": match.name,
-                    "folder": str(match.parent),
-                    "modified": modified.strftime("%B %d, %Y at %I:%M %p"),
-                    "size_kb": round(stat.st_size / 1024, 1),
-                })
+            for item in search_dir.iterdir():
+                _search_photos(item)
         except PermissionError:
             continue
 

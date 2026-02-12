@@ -21,7 +21,7 @@ from mcp_servers.screen_dispatch import (
 
 
 def test_find_file_not_found():
-    result = find_file("zzz_nonexistent_file_xyz_12345")
+    result = find_file("zzz_nonexistent_file_xyz_12345", search_in="/tmp")
     assert "couldn't find" in result.lower()
 
 def test_find_file_with_results():
@@ -88,7 +88,7 @@ def test_inbox_has_scam():
 # --- Photo tools ---
 
 def test_find_photos_no_results():
-    result = find_photos("zzz_nonexistent_photo_xyz")
+    result = find_photos("zzz_nonexistent_photo_xyz", search_in="/tmp")
     assert "couldn't find" in result.lower()
 
 def test_share_photo_missing():
