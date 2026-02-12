@@ -4,7 +4,7 @@
 AI chat assistant helping elderly people use their computer through natural conversation. 5 modules: email, files, printing, photos, video calls. Plus Scam Shield active protection layer + Vision (screen reading). Chat window UI with voice input/TTS.
 
 ## Architecture
-- Frontend: Flask chat window (big text, voice via Web Speech API, TTS via Speech Synthesis)
+- Frontend: Flask chat window (big text, voice via Web Speech API, TTS via Kokoro on WSL port 5050 with browser fallback)
 - Backend: Claude API (Opus 4.6) with extended thinking + prompt caching, 30 tools via direct tool-use loop (up to 5 rounds)
 - Dispatch layer in `mcp_servers/screen_dispatch.py`: 30 tools with tiered fallback: win32com (Tier 1) → pywinauto (Tier 2) → existing MCP (Tier 3) → Claude Vision (Tier 4, read_my_screen captures screenshots)
 - System Troubleshooting: `check_system_health()` (memory/disk/CPU), `fix_frozen_program()` (kill stuck apps w/ confirm), `check_internet()` (ping + WiFi diagnostics) — all via PowerShell

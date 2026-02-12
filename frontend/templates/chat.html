@@ -223,6 +223,24 @@
             background: rgba(255,255,255,0.3);
         }
 
+        .btn-replay {
+            position: absolute;
+            right: 130px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 16px;
+            padding: 8px 16px;
+            background: rgba(255,255,255,0.2);
+            color: white;
+            border: 1px solid rgba(255,255,255,0.4);
+            border-radius: 8px;
+            cursor: pointer;
+        }
+
+        .btn-replay:hover {
+            background: rgba(255,255,255,0.3);
+        }
+
         .btn-demo {
             position: absolute;
             left: 24px;
@@ -374,6 +392,99 @@
         .thinking-trace-content.expanded {
             display: block;
         }
+
+        /* === Avatar Section === */
+        .avatar-section {
+            flex-shrink: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 8px 0 4px 0;
+            background: #FFF8F0;
+        }
+
+        .avatar-wrapper {
+            position: relative;
+            width: 120px;
+            height: 140px;
+        }
+
+        .avatar-svg {
+            position: relative;
+            z-index: 1;
+        }
+
+        /* Idle floating */
+        .avatar-buddy-group {
+            animation: avatar-float 3s ease-in-out infinite;
+        }
+
+        .avatar-buddy-group.speaking {
+            animation: avatar-float-speak 1.5s ease-in-out infinite;
+        }
+
+        @keyframes avatar-float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-4px); }
+        }
+
+        @keyframes avatar-float-speak {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-6px); }
+        }
+
+        /* Blink */
+        .avatar-eye {
+            transition: transform 0.12s ease-in-out;
+            transform-origin: center center;
+        }
+
+        .avatar-eye.blink {
+            transform: scaleY(0.08);
+        }
+
+        /* Arm wave */
+        .avatar-arm-left {
+            transform-origin: 85px 145px;
+        }
+
+        .avatar-arm-right {
+            transform-origin: 195px 145px;
+        }
+
+        .avatar-arm-left.wave {
+            animation: avatar-wave-left 0.4s ease-in-out infinite alternate;
+        }
+
+        .avatar-arm-right.wave {
+            animation: avatar-wave-right 0.4s ease-in-out infinite alternate;
+        }
+
+        @keyframes avatar-wave-left {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(-12deg); }
+        }
+
+        @keyframes avatar-wave-right {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(12deg); }
+        }
+
+        /* Sparkles */
+        .avatar-sparkle {
+            animation: avatar-twinkle 2s ease-in-out infinite;
+            opacity: 0;
+        }
+
+        .avatar-sparkle:nth-child(2) { animation-delay: 0.7s; }
+        .avatar-sparkle:nth-child(3) { animation-delay: 1.4s; }
+        .avatar-sparkle:nth-child(4) { animation-delay: 0.3s; }
+        .avatar-sparkle:nth-child(5) { animation-delay: 1.1s; }
+
+        @keyframes avatar-twinkle {
+            0%, 100% { opacity: 0; transform: scale(0.5); }
+            50% { opacity: 0.8; transform: scale(1); }
+        }
     </style>
 </head>
 <body>
@@ -381,6 +492,7 @@
         <button class="btn-demo" id="demoBtn" onclick="toggleDemoPanel()" title="Toggle family SMS demo panel">Demo</button>
         TechBuddy
         <div class="header-subtitle">Your friendly computer helper</div>
+        <button class="btn-replay" onclick="replayLastMessage()" title="Replay last response">Replay</button>
         <button class="btn-mute" id="muteBtn" onclick="toggleMute()" title="Turn voice on/off">Sound: On</button>
     </div>
 
@@ -398,6 +510,47 @@
         <div class="sms-reply" id="smsReply">
             <strong>SMS Reply:</strong> <span id="smsReplyText"></span>
         </div>
+    </div>
+
+    <div class="avatar-section" id="avatarSection">
+      <div class="avatar-wrapper">
+        <svg class="avatar-svg" viewBox="0 0 280 320" width="120" height="140" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="avatarBodyGrad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#FFF5E6"/>
+              <stop offset="60%" stop-color="#FFE8D6"/>
+              <stop offset="100%" stop-color="#FFCCBC"/>
+            </linearGradient>
+            <radialGradient id="avatarBlushL" cx="0.5" cy="0.5" r="0.5">
+              <stop offset="0%" stop-color="#FFAB91" stop-opacity="0.6"/>
+              <stop offset="100%" stop-color="#FFAB91" stop-opacity="0"/>
+            </radialGradient>
+            <radialGradient id="avatarBlushR" cx="0.5" cy="0.5" r="0.5">
+              <stop offset="0%" stop-color="#FFAB91" stop-opacity="0.6"/>
+              <stop offset="100%" stop-color="#FFAB91" stop-opacity="0"/>
+            </radialGradient>
+          </defs>
+          <g class="avatar-sparkles">
+            <circle class="avatar-sparkle" cx="45" cy="60" r="3" fill="#FFE0B2"/>
+            <circle class="avatar-sparkle" cx="235" cy="45" r="2.5" fill="#FFE0B2"/>
+            <circle class="avatar-sparkle" cx="55" cy="240" r="2" fill="#FFE0B2"/>
+            <circle class="avatar-sparkle" cx="230" cy="220" r="3" fill="#FFE0B2"/>
+            <circle class="avatar-sparkle" cx="140" cy="30" r="2" fill="#FFE0B2"/>
+          </g>
+          <g class="avatar-buddy-group" id="avatarBuddyGroup">
+            <path d="M 140 40 C 70 40, 55 90, 55 140 C 55 185, 60 220, 75 250 Q 80 265, 95 260 Q 108 255, 115 265 Q 125 278, 140 275 Q 155 278, 165 265 Q 172 255, 185 260 Q 200 265, 205 250 C 220 220, 225 185, 225 140 C 225 90, 210 40, 140 40 Z" fill="url(#avatarBodyGrad)" stroke="#D7CCC8" stroke-width="1.5"/>
+            <path class="avatar-arm-left" id="avatarArmLeft" d="M 72 140 C 55 135, 38 145, 35 158 C 32 170, 42 178, 52 172 C 58 168, 58 155, 62 148" fill="url(#avatarBodyGrad)" stroke="#D7CCC8" stroke-width="1.5"/>
+            <path class="avatar-arm-right" id="avatarArmRight" d="M 208 140 C 225 135, 242 145, 245 158 C 248 170, 238 178, 228 172 C 222 168, 222 155, 218 148" fill="url(#avatarBodyGrad)" stroke="#D7CCC8" stroke-width="1.5"/>
+            <ellipse cx="98" cy="175" rx="18" ry="12" fill="url(#avatarBlushL)"/>
+            <ellipse cx="182" cy="175" rx="18" ry="12" fill="url(#avatarBlushR)"/>
+            <ellipse class="avatar-eye" id="avatarEyeLeft" cx="118" cy="145" rx="7" ry="8" fill="#5D4037"/>
+            <ellipse class="avatar-eye" id="avatarEyeRight" cx="162" cy="145" rx="7" ry="8" fill="#5D4037"/>
+            <circle cx="115" cy="141" r="2.5" fill="white" opacity="0.8"/>
+            <circle cx="159" cy="141" r="2.5" fill="white" opacity="0.8"/>
+            <path id="avatarMouth" d="M 127 185 Q 140 196, 153 185" fill="none" stroke="#8D6E63" stroke-width="2.5" stroke-linecap="round"/>
+          </g>
+        </svg>
+      </div>
     </div>
 
     <div class="messages" id="messages">
@@ -429,6 +582,121 @@
         const sendBtn = document.getElementById('sendBtn');
         const thinkingEl = document.getElementById('thinking');
         let firstMessage = true;
+
+        // === Avatar elements ===
+        const avatarBuddyGroup = document.getElementById('avatarBuddyGroup');
+        const avatarEyeLeft = document.getElementById('avatarEyeLeft');
+        const avatarEyeRight = document.getElementById('avatarEyeRight');
+        const avatarMouth = document.getElementById('avatarMouth');
+        const avatarArmLeft = document.getElementById('avatarArmLeft');
+        const avatarArmRight = document.getElementById('avatarArmRight');
+
+        // Avatar mouth shapes
+        const MOUTH_CLOSED = "M 127 185 Q 140 196, 153 185";
+        const MOUTH_SMALL  = "M 127 185 Q 140 200, 153 185";
+        const MOUTH_OPEN   = "M 125 184 Q 140 208, 155 184";
+        const MOUTH_WIDE   = "M 123 183 Q 140 215, 157 183";
+        const MOUTH_SHAPES = [MOUTH_CLOSED, MOUTH_SMALL, MOUTH_OPEN, MOUTH_WIDE, MOUTH_OPEN, MOUTH_SMALL];
+        const MOUTH_THINKING = "M 130 188 Q 140 190, 150 188";
+
+        let avatarMouthInterval = null;
+        let avatarMouthIndex = 0;
+        let avatarBlinkTimeout = null;
+        let currentAudio = null;
+        let useKokoro = false;
+
+        const KOKORO_URL = 'http://localhost:5050/speak';
+
+        // Detect Kokoro TTS server
+        async function detectKokoro() {
+            try {
+                const res = await fetch(KOKORO_URL, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({text: 'hello', rate: 1.0})
+                });
+                if (res.ok) {
+                    useKokoro = true;
+                    console.log('Kokoro TTS detected on port 5050');
+                }
+            } catch {
+                useKokoro = false;
+                console.log('Kokoro TTS not available, using browser voice');
+            }
+        }
+        detectKokoro();
+
+        // === Avatar blink ===
+        function avatarDoBlink() {
+            avatarEyeLeft.classList.add('blink');
+            avatarEyeRight.classList.add('blink');
+            setTimeout(() => {
+                avatarEyeLeft.classList.remove('blink');
+                avatarEyeRight.classList.remove('blink');
+                if (Math.random() < 0.3) {
+                    setTimeout(() => {
+                        avatarEyeLeft.classList.add('blink');
+                        avatarEyeRight.classList.add('blink');
+                        setTimeout(() => {
+                            avatarEyeLeft.classList.remove('blink');
+                            avatarEyeRight.classList.remove('blink');
+                        }, 120);
+                    }, 180);
+                }
+            }, 120);
+            avatarScheduleBlink();
+        }
+
+        function avatarScheduleBlink() {
+            avatarBlinkTimeout = setTimeout(avatarDoBlink, 2000 + Math.random() * 4000);
+        }
+        avatarScheduleBlink();
+
+        // === Avatar state management ===
+        function avatarStartThinking() {
+            avatarEyeLeft.style.transform = 'translate(-2px, -4px)';
+            avatarEyeRight.style.transform = 'translate(-2px, -4px)';
+            avatarMouth.setAttribute('d', MOUTH_THINKING);
+        }
+
+        function avatarClearThinking() {
+            avatarEyeLeft.style.transform = '';
+            avatarEyeRight.style.transform = '';
+            avatarMouth.setAttribute('d', MOUTH_CLOSED);
+        }
+
+        function avatarStartSpeaking() {
+            avatarClearThinking();
+            avatarMouthIndex = 0;
+            avatarMouthInterval = setInterval(() => {
+                avatarMouthIndex = (avatarMouthIndex + 1) % MOUTH_SHAPES.length;
+                avatarMouth.setAttribute('d', MOUTH_SHAPES[avatarMouthIndex]);
+            }, 150);
+            avatarBuddyGroup.classList.add('speaking');
+            avatarArmLeft.classList.add('wave');
+            avatarArmRight.classList.add('wave');
+        }
+
+        function avatarStopSpeaking() {
+            if (avatarMouthInterval) {
+                clearInterval(avatarMouthInterval);
+                avatarMouthInterval = null;
+            }
+            avatarBuddyGroup.classList.remove('speaking');
+            avatarArmLeft.classList.remove('wave');
+            avatarArmRight.classList.remove('wave');
+            avatarMouth.setAttribute('d', MOUTH_CLOSED);
+        }
+
+        function stopCurrentSpeech() {
+            if (currentAudio) {
+                currentAudio.pause();
+                currentAudio.currentTime = 0;
+                currentAudio = null;
+            }
+            if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+            avatarStopSpeaking();
+        }
 
         inputEl.addEventListener('keydown', function(e) {
             if (e.key === 'Enter' && !sendBtn.disabled) {
@@ -495,10 +763,12 @@
             const text = inputEl.value.trim();
             if (!text) return;
 
+            stopCurrentSpeech();
             addMessage(text, 'user');
             inputEl.value = '';
             sendBtn.disabled = true;
             thinkingEl.classList.add('visible');
+            avatarStartThinking();
             messagesEl.scrollTop = messagesEl.scrollHeight;
 
             try {
@@ -508,8 +778,10 @@
                     body: JSON.stringify({ message: text })
                 });
                 const data = await res.json();
+                avatarClearThinking();
                 addMessage(data.reply, 'assistant', data.thinking || '');
             } catch (err) {
+                avatarClearThinking();
                 addMessage("Something went wrong. Let's try again.", 'assistant');
             } finally {
                 thinkingEl.classList.remove('visible');
@@ -565,24 +837,134 @@
             speakBtn.classList.remove('listening');
         }
 
-        // --- Text-to-Speech ---
+        // --- Text-to-Speech (Kokoro-first, browser fallback) ---
         const muteBtn = document.getElementById('muteBtn');
         let ttsEnabled = true;
+        let lastSpokenText = '';
+
+        function cleanTextForSpeech(text) {
+            return text
+                .replace(/[\u{1F300}-\u{1FAD6}\u{2600}-\u{27BF}\u{FE00}-\u{FE0F}\u{1F900}-\u{1F9FF}\u{200D}\u{20E3}\u{E0020}-\u{E007F}]/gu, '')
+                .replace(/[*#_~`>|]/g, '')
+                .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+                .replace(/https?:\/\/\S+/g, '')
+                .replace(/\n+/g, '. ')
+                .replace(/\s{2,}/g, ' ')
+                .trim();
+        }
 
         function speakText(text) {
-            if (!ttsEnabled || !('speechSynthesis' in window)) return;
+            if (!ttsEnabled) return;
+            const clean = cleanTextForSpeech(text);
+            if (!clean) return;
+            lastSpokenText = clean;
+            stopCurrentSpeech();
+            if (useKokoro) {
+                speakKokoro(clean);
+            } else {
+                speakBrowser(clean);
+            }
+        }
+
+        function replayLastMessage() {
+            if (!lastSpokenText) return;
+            stopCurrentSpeech();
+            if (useKokoro) {
+                speakKokoro(lastSpokenText);
+            } else {
+                speakBrowser(lastSpokenText);
+            }
+        }
+
+        async function fetchKokoroAudio(text) {
+            const res = await fetch(KOKORO_URL, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({text: text, rate: 1.0})
+            });
+            if (!res.ok) throw new Error('Kokoro error');
+            const blob = await res.blob();
+            return URL.createObjectURL(blob);
+        }
+
+        function playAudioUrl(url) {
+            return new Promise((resolve, reject) => {
+                currentAudio = new Audio(url);
+                currentAudio.onended = () => { URL.revokeObjectURL(url); resolve(); };
+                currentAudio.onerror = () => { URL.revokeObjectURL(url); reject(); };
+                currentAudio.play();
+            });
+        }
+
+        async function speakKokoro(text) {
+            // Asymmetric chunking: first sentence for fast start, rest as one block for natural prosody
+            const sentences = text.match(/[^.!?]+[.!?]+/g) || [text];
+            avatarStartSpeaking();
+
+            if (sentences.length <= 1) {
+                // Short response — send as-is
+                try {
+                    const url = await fetchKokoroAudio(text);
+                    await playAudioUrl(url);
+                } catch (err) {
+                    console.log('Kokoro failed, falling back to browser voice:', err);
+                    useKokoro = false;
+                    avatarStopSpeaking();
+                    speakBrowser(text);
+                    return;
+                }
+            } else {
+                // First sentence = fast start (~200ms), rest = one natural block
+                const firstChunk = sentences[0].trim();
+                const restChunk = sentences.slice(1).join(' ').trim();
+
+                let restPromise = null;
+                try {
+                    const firstPromise = fetchKokoroAudio(firstChunk);
+                    restPromise = fetchKokoroAudio(restChunk);  // pre-fetch immediately
+                    const firstUrl = await firstPromise;
+                    await playAudioUrl(firstUrl);
+                } catch (err) {
+                    console.log('Kokoro failed, falling back to browser voice:', err);
+                    useKokoro = false;
+                    avatarStopSpeaking();
+                    speakBrowser(text);
+                    return;
+                }
+
+                if (restPromise && ttsEnabled) {
+                    try {
+                        const restUrl = await restPromise;
+                        await playAudioUrl(restUrl);
+                    } catch (err) {
+                        console.log('Kokoro chunk 2 failed:', err);
+                    }
+                }
+            }
+            currentAudio = null;
+            avatarStopSpeaking();
+        }
+
+        function speakBrowser(text) {
+            if (!('speechSynthesis' in window)) return;
             window.speechSynthesis.cancel();
+
             const utterance = new SpeechSynthesisUtterance(text);
             utterance.rate = 0.9;
             utterance.pitch = 1.0;
             utterance.volume = 1.0;
+
+            utterance.onstart = () => avatarStartSpeaking();
+            utterance.onend = () => avatarStopSpeaking();
+            utterance.onerror = () => avatarStopSpeaking();
+
             window.speechSynthesis.speak(utterance);
         }
 
         function toggleMute() {
             ttsEnabled = !ttsEnabled;
             muteBtn.textContent = ttsEnabled ? 'Sound: On' : 'Sound: Off';
-            if (!ttsEnabled) window.speechSynthesis.cancel();
+            if (!ttsEnabled) stopCurrentSpeech();
         }
 
         // --- Demo Panel (Simulated Family SMS) ---

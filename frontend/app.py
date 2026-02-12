@@ -182,7 +182,7 @@ def _build_system_prompt() -> str:
     """Build the system prompt with today's date injected."""
     now = datetime.now()
     today_date = now.strftime("%A, %B %d, %Y")
-    session_date = now.strftime("%-m_%-d_%y")
+    session_date = f"{now.month}_{now.day}_{now.strftime('%y')}"
     return _SYSTEM_PROMPT_BASE.format(today_date=today_date, session_date=session_date)
 
 # Tool definitions for Claude API
@@ -598,7 +598,10 @@ def serialize_content(content) -> list[dict]:
                 "input": block.input,
             })
         elif block.type == "thinking":
-            result.append({"type": "thinking", "thinking": block.thinking})
+            entry = {"type": "thinking", "thinking": block.thinking}
+            if hasattr(block, "signature") and block.signature:
+                entry["signature"] = block.signature
+            result.append(entry)
     return result
 
 
@@ -611,6 +614,50 @@ def _extract_tool_thinking(text: str) -> str:
 def _strip_tool_thinking(text: str) -> str:
     """Remove thinking trace markers from text."""
     return re.sub(r'\[THINKING_TRACE\].*?\[/THINKING_TRACE\]', '', text, flags=re.DOTALL).strip()
+
+
+def _compact_history(history: list) -> list:
+    """Compact history to fit in session cookie (~4KB limit).
+
+    Keeps full detail for the latest exchange (so tool-use pairs stay valid).
+    Strips thinking/tool blocks from older messages, keeping only text.
+    """
+    if len(history) <= 4:
+        return history
+
+    # Find where the last user text message starts (= latest exchange)
+    last_user_idx = 0
+    for i in range(len(history) - 1, -1, -1):
+        if history[i]["role"] == "user" and isinstance(history[i].get("content"), str):
+            last_user_idx = i
+            break
+
+    compact = []
+    for i, msg in enumerate(history):
+        if i >= last_user_idx:
+            # Keep latest exchange in full detail (tool pairs intact)
+            compact.append(msg)
+        elif msg["role"] == "user" and isinstance(msg.get("content"), str):
+            compact.append(msg)
+        elif msg["role"] == "assistant":
+            content = msg.get("content")
+            if isinstance(content, str):
+                compact.append(msg)
+            elif isinstance(content, list):
+                # Extract just text from older assistant messages
+                texts = [b["text"] for b in content if b.get("type") == "text"]
+                if texts:
+                    compact.append({"role": "assistant", "content": " ".join(texts)})
+        # Drop old tool_result user messages (they're huge and no longer needed)
+
+    # Cap at ~16 entries to stay under 4KB
+    if len(compact) > 16:
+        compact = compact[-16:]
+        # Ensure starts with user message
+        while compact and compact[0]["role"] != "user":
+            compact = compact[1:]
+
+    return compact
 
 
 def call_claude(history: list) -> tuple[str, str, list]:
@@ -716,7 +763,7 @@ def chat():
         if not thinking_text:
             thinking_text = tool_thinking
 
-    session["history"] = history
+    session["history"] = _compact_history(history)
 
     response_data = {"reply": assistant_text}
     if thinking_text:
