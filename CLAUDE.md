@@ -5,8 +5,9 @@ AI chat assistant helping elderly people use their computer through natural conv
 
 ## Architecture
 - Frontend: Flask chat window (big text, voice via Web Speech API, TTS via Kokoro on WSL port 5050 with browser fallback)
-- Backend: Claude API (Opus 4.6) with extended thinking + prompt caching, 30 tools via direct tool-use loop (up to 5 rounds)
-- Dispatch layer in `mcp_servers/screen_dispatch.py`: 30 tools with tiered fallback: win32com (Tier 1) → pywinauto (Tier 2) → existing MCP (Tier 3) → Claude Vision (Tier 4, read_my_screen captures screenshots)
+- Backend: Claude API (Opus 4.6) with extended thinking + prompt caching, 34 tools via direct tool-use loop (up to 10 rounds)
+- Dispatch layer in `mcp_servers/screen_dispatch.py`: 34 tools with tiered fallback: win32com (Tier 1) → pywinauto (Tier 2) → existing MCP (Tier 3) → Claude Vision (Tier 4, read_my_screen captures screenshots)
+- iOS Phone Control: `capture_phone_screen()`, `tap_phone_screen()`, `open_phone_app()` — via MacinCloud iOS Simulator + Cloudflare Tunnel. Mac Flask server at `PHONE_SERVER_URL` runs xcrun simctl commands.
 - System Troubleshooting: `check_system_health()` (memory/disk/CPU), `fix_frozen_program()` (kill stuck apps w/ confirm), `check_internet()` (ping + WiFi diagnostics) — all via PowerShell
 - Smart Document Saving: `smart_save_document()` auto-names files with date/time stamp, saves to `Documents/TechBuddy Saved/`
 - Proactive Troubleshooting: system prompt instructs Claude to offer screen reading when user seems confused + `verify_screen_step()` tool verifies steps were completed via screenshot
@@ -42,6 +43,8 @@ AI chat assistant helping elderly people use their computer through natural conv
 - Run frontend: `cd ~/techbuddy && venv/bin/python frontend/app.py` → http://localhost:5000
 - Run on Windows: `cd C:\Users\grego\techbuddy && venv\Scripts\python frontend\app.py`
 - Test: `cd ~/techbuddy && venv/bin/pytest tests/ -v` (136/136 passing)
+- iOS Simulator demo apps (working): settings, messages, safari, photos, calendar, maps
+- iOS Simulator apps NOT available: mail, phone, camera, notes
 - Lint: `ruff check .`
 
 ## Project Gotchas

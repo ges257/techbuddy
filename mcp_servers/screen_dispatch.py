@@ -2247,5 +2247,123 @@ def recall_user_context() -> str:
     return "\n\n".join(context_parts)
 
 
+# --- iPhone / iOS Simulator Remote Control ---
+# Connects to a Flask screenshot server running on a Mac (via Cloudflare Tunnel)
+PHONE_SERVER_URL = os.environ.get("PHONE_SERVER_URL", "")
+
+
+@mcp.tool()
+def capture_phone_screen() -> str | list:
+    """Take a screenshot of the user's iPhone screen so you can SEE what's on their phone.
+    Use when they say 'look at my phone', 'what's on my phone screen?',
+    'I got a weird text', or 'help me with my iPhone'.
+    This captures the phone screen and lets you see exactly what they see.
+    """
+    if not PHONE_SERVER_URL:
+        return "Phone screen capture isn't set up yet. I can help with your computer screen instead — just say 'read my screen'."
+
+    try:
+        import urllib.request
+        import json
+
+        req = urllib.request.Request(f"{PHONE_SERVER_URL}/screenshot")
+        with urllib.request.urlopen(req, timeout=30) as resp:
+            data = json.loads(resp.read().decode())
+
+        base64_data = data["image"]
+
+        return [
+            {
+                "type": "image",
+                "source": {
+                    "type": "base64",
+                    "media_type": "image/png",
+                    "data": base64_data,
+                },
+            },
+            {
+                "type": "text",
+                "text": (
+                    "Here is a screenshot of the user's iPhone screen. "
+                    "Describe what you see in simple, plain language. "
+                    "If there's a suspicious message or scam, warn them immediately. "
+                    "Give step-by-step guidance: 'Tap the blue button that says Settings.'"
+                ),
+            },
+        ]
+    except Exception as e:
+        return (
+            "I couldn't connect to the phone right now. "
+            "Make sure the phone server is running and try again."
+        )
+
+
+@mcp.tool()
+def tap_phone_screen(x: int, y: int) -> str:
+    """Tap a specific location on the user's iPhone screen. Use this AFTER viewing
+    a phone screenshot with capture_phone_screen to interact with the phone.
+    Provide x,y coordinates based on where you want to tap in the screenshot image.
+    The top-left corner of the phone screen is (0, 0).
+
+    Args:
+        x: X coordinate to tap (pixels from left edge of phone screen)
+        y: Y coordinate to tap (pixels from top edge of phone screen)
+    """
+    if not PHONE_SERVER_URL:
+        return "Phone control isn't set up yet."
+
+    try:
+        import urllib.request
+        import json
+
+        payload = json.dumps({"x": x, "y": y}).encode()
+        req = urllib.request.Request(
+            f"{PHONE_SERVER_URL}/tap",
+            data=payload,
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            data = json.loads(resp.read().decode())
+
+        return f"Tapped the phone screen at ({x}, {y}). Use capture_phone_screen to see what happened."
+    except Exception as e:
+        return "I couldn't tap the phone screen. The phone server might not be running."
+
+
+@mcp.tool()
+def open_phone_app(app_name: str) -> str:
+    """Open an app on the user's iPhone. Use when they say 'open Settings on my phone',
+    'go to Messages', 'open Safari', etc. Available apps: Settings, Messages, Safari,
+    Photos, Mail, Phone, Calendar, Maps, Camera, Notes.
+
+    Args:
+        app_name: Name of the app to open (e.g., 'Settings', 'Messages', 'Safari')
+    """
+    if not PHONE_SERVER_URL:
+        return "Phone control isn't set up yet."
+
+    try:
+        import urllib.request
+        import json
+
+        payload = json.dumps({"app": app_name.lower()}).encode()
+        req = urllib.request.Request(
+            f"{PHONE_SERVER_URL}/launch",
+            data=payload,
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            data = json.loads(resp.read().decode())
+
+        if data.get("status") == "launched":
+            return f"Opened {app_name} on the phone. Use capture_phone_screen to see what's showing now."
+        else:
+            return f"Couldn't open {app_name}: {data.get('message', 'unknown error')}"
+    except Exception as e:
+        return "I couldn't open the app. The phone server might not be running."
+
+
 if __name__ == "__main__":
     mcp.run()

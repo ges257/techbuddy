@@ -49,6 +49,9 @@ from mcp_servers.screen_dispatch import (
     save_note,
     read_notes,
     recall_user_context,
+    capture_phone_screen,
+    tap_phone_screen,
+    open_phone_app,
 )
 
 app = Flask(__name__)
@@ -544,6 +547,37 @@ TOOLS = [
             "properties": {},
         },
     },
+    {
+        "name": "capture_phone_screen",
+        "description": "Take a screenshot of the user's iPhone screen so you can SEE what's on their phone. Use when they say 'look at my phone', 'what's on my phone screen?', 'I got a weird text', or 'help me with my iPhone'. This captures the phone screen and lets you see exactly what they see.",
+        "input_schema": {
+            "type": "object",
+            "properties": {},
+        },
+    },
+    {
+        "name": "tap_phone_screen",
+        "description": "Tap a specific location on the user's iPhone screen. Use AFTER viewing a phone screenshot with capture_phone_screen. Provide x,y coordinates based on where you want to tap in the screenshot. Top-left corner is (0, 0).",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "x": {"type": "integer", "description": "X coordinate to tap (pixels from left edge of phone screen)"},
+                "y": {"type": "integer", "description": "Y coordinate to tap (pixels from top edge of phone screen)"},
+            },
+            "required": ["x", "y"],
+        },
+    },
+    {
+        "name": "open_phone_app",
+        "description": "Open an app on the user's iPhone. Use when they say 'open Settings on my phone', 'go to Messages', 'open Safari', etc. Available apps: Settings, Messages, Safari, Photos, Mail, Phone, Calendar, Maps, Camera, Notes.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "app_name": {"type": "string", "description": "Name of the app to open (e.g., 'Settings', 'Messages', 'Safari')"},
+            },
+            "required": ["app_name"],
+        },
+    },
 ]
 
 # Map tool names to actual functions
@@ -579,6 +613,9 @@ TOOL_FUNCTIONS = {
     "save_note": save_note,
     "read_notes": read_notes,
     "recall_user_context": recall_user_context,
+    "capture_phone_screen": capture_phone_screen,
+    "tap_phone_screen": tap_phone_screen,
+    "open_phone_app": open_phone_app,
 }
 
 
