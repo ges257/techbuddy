@@ -20,6 +20,7 @@ from mcp_servers.screen_dispatch import (
     find_file,
     find_recent_files,
     open_file,
+    open_application,
     list_folder,
     print_document,
     troubleshoot_printer,
@@ -219,6 +220,17 @@ TOOLS = [
                 "file_path": {"type": "string", "description": "Full path to the file to open"},
             },
             "required": ["file_path"],
+        },
+    },
+    {
+        "name": "open_application",
+        "description": "Open an application by name. Use when the user wants to open Word, Notepad, Calculator, Excel, or Paint. For Word, this creates a blank document automatically so they can start typing right away.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "app_name": {"type": "string", "description": "Name of the app to open (e.g., 'word', 'notepad', 'calculator', 'excel', 'paint')"},
+            },
+            "required": ["app_name"],
         },
     },
     {
@@ -539,6 +551,7 @@ TOOL_FUNCTIONS = {
     "find_file": find_file,
     "find_recent_files": find_recent_files,
     "open_file": open_file,
+    "open_application": open_application,
     "list_folder": list_folder,
     "print_document": print_document,
     "troubleshoot_printer": troubleshoot_printer,
@@ -669,7 +682,7 @@ def call_claude(history: list) -> tuple[str, str, list]:
     Uses prompt caching for the system prompt.
     Handles structured tool results (vision returns image content blocks).
     """
-    MAX_TOOL_ROUNDS = 5
+    MAX_TOOL_ROUNDS = 10
 
     for _ in range(MAX_TOOL_ROUNDS):
         response = client.messages.create(

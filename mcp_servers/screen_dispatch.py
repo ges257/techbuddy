@@ -488,6 +488,64 @@ def open_file(file_path: str) -> str:
 
 
 @mcp.tool()
+def open_application(app_name: str) -> str:
+    """Open an application by name. Handles Word, Notepad, Calculator, Excel, Paint.
+    For Word, this creates a blank document automatically — no start screen.
+    After opening, the app is ready to use with type_text or click_button.
+
+    Args:
+        app_name: Name of the app (e.g., "word", "notepad", "calculator", "excel", "paint")
+    """
+    name = app_name.lower().strip()
+
+    if not IS_WINDOWS:
+        return f"To open {app_name}: look for it in your applications menu and click it."
+
+    # Word gets special handling via win32com to skip the start screen
+    if name in ("word", "microsoft word", "ms word"):
+        try:
+            import win32com.client
+            word = win32com.client.Dispatch("Word.Application")
+            word.Visible = True
+            word.Documents.Add()
+            return "Word is open with a blank document. You can start typing!"
+        except Exception:
+            # Fallback: launch directly
+            try:
+                os.startfile("winword")
+                import time
+                time.sleep(3)
+                return "Word is opening. You may need to click 'Blank document' on the start screen."
+            except Exception:
+                return "I couldn't open Word. Is Microsoft Office installed?"
+
+    # Map common app names to executables
+    app_map = {
+        "notepad": "notepad.exe",
+        "calculator": "calc.exe",
+        "calc": "calc.exe",
+        "excel": "excel.exe",
+        "microsoft excel": "excel.exe",
+        "paint": "mspaint.exe",
+        "ms paint": "mspaint.exe",
+        "powerpoint": "powerpnt.exe",
+        "outlook": "outlook.exe",
+    }
+
+    exe = app_map.get(name)
+    if not exe:
+        return f"I don't know how to open '{app_name}'. Try asking me to open Word, Notepad, Calculator, Excel, or Paint."
+
+    try:
+        os.startfile(exe)
+        import time
+        time.sleep(2)
+        return f"{app_name.title()} is opening now. You should see it on your screen in a moment."
+    except Exception:
+        return f"I had trouble opening {app_name}. It might not be installed on this computer."
+
+
+@mcp.tool()
 def list_folder(folder_path: str = "Desktop") -> str:
     """Show what's in a folder. Defaults to Desktop.
     Helps elderly users see what files they have.
