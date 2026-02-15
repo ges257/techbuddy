@@ -247,7 +247,7 @@ def test_analyze_scam_grandparent():
 
 def test_read_email_scam_shows_warning():
     result = read_email(5)  # Prize scam email
-    assert "SCAM WARNING" in result or "WARNING" in result
+    assert "DANGER" in result or "WARNING" in result
     assert "prize" in result.lower() or "congratulations" in result.lower()
 
 def test_read_email_safe_no_warning():

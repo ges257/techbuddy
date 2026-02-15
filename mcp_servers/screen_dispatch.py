@@ -1650,15 +1650,19 @@ def check_email() -> str:
     lines = [f"You have {len(active)} emails ({unread} unread):\n"]
 
     for e in active:
-        status = "NEW" if not e["is_read"] else "    "
+        status = "NEW" if not e["is_read"] else "READ"
         # Scan for scam indicators
         scan_text = f"{e['from']} {e['subject']} {e.get('preview', '')}"
         scan = _scan_for_scam(scan_text)
         warning = " ⚠️ SUSPICIOUS" if scan["risk"] != "SAFE" else ""
-        lines.append(f"  [{status}] {e['id']}. From: {e['from'].split('<')[0].strip()}{warning}")
-        lines.append(f"         Subject: {e['subject']}")
-        lines.append(f"         {e['date']}")
-        lines.append("")
+        sender = e["from"].split("<")[0].strip()
+        # Shorten date: "February 12, 2026 at 10:15 AM" -> "Feb 12, 10:15 AM"
+        try:
+            dt = datetime.strptime(e["date"], "%B %d, %Y at %I:%M %p")
+            short_date = dt.strftime("%b %d, %I:%M %p")
+        except ValueError:
+            short_date = e["date"]
+        lines.append(f"{e['id']}. [{status}] {sender} — \"{e['subject']}\" ({short_date}){warning}")
 
     return "\n".join(lines)
 
@@ -1689,14 +1693,42 @@ def read_email(email_id: int) -> str:
 
     # Prepend scam warning if risky
     if scan["risk"] == "DANGEROUS":
-        lines.append("⚠️ SCAM WARNING — This email has multiple scam indicators!")
+        lines.append("⛔ DANGER — This email has multiple scam indicators!")
         lines.append("Do NOT click links, send money, or share personal information.")
+        lines.append("")
+        # List the specific flags found
+        categories_seen = set()
+        for category, phrase in scan["flags"]:
+            if category not in categories_seen:
+                categories_seen.add(category)
+                if category == "urgency":
+                    lines.append(f"  - Pressure language: \"{phrase}\"")
+                elif category == "authority":
+                    lines.append(f"  - Impersonates authority: \"{phrase}\"")
+                elif category == "financial":
+                    lines.append(f"  - Asks for money/info: \"{phrase}\"")
+                elif category == "tech_support":
+                    lines.append(f"  - Fake tech support: \"{phrase}\"")
+                elif category == "grandparent":
+                    lines.append(f"  - Emergency money request: \"{phrase}\"")
+                elif category == "shortened_url":
+                    lines.append(f"  - Hidden link: \"{phrase}\"")
+                elif category == "suspicious_tld":
+                    lines.append(f"  - Suspicious website: \"{phrase}\"")
+        lines.append("")
+        # Show matched org contacts if any
         if scan["matched_orgs"]:
             for org_key in scan["matched_orgs"]:
                 org = KNOWN_LEGITIMATE_CONTACTS.get(org_key, {})
                 if org:
                     lines.append(f"If this were really from {org['name']}, call them at {org['phone']} to verify.")
                     lines.append(f"Remember: {org['key_fact']}")
+            lines.append("")
+        # Always include elder fraud hotline
+        fbi = KNOWN_LEGITIMATE_CONTACTS["fbi"]
+        lines.append(f"To report scams, call the {fbi['name']}: {fbi['phone']}")
+        lines.append("")
+        lines.append("TIP: Ask me to \"analyze this email for scams\" for a detailed safety check.")
         lines.append("")
         lines.append("--- EMAIL BELOW (read with caution) ---\n")
     elif scan["risk"] == "SUSPICIOUS":
