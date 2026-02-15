@@ -18,6 +18,9 @@ import glob
 import shutil
 import subprocess
 import platform
+import imaplib
+import email as email_lib
+from email.header import decode_header
 from datetime import datetime, timedelta
 from pathlib import Path
 
@@ -1514,8 +1517,220 @@ def verify_screen_step(expected: str) -> str | list:
 
 
 # ---------------------------------------------------------------------------
-# Email Module — Simulated inbox for demo (swap for IMAP/SMTP later)
+# Email Module — Real Gmail via IMAP (with simulated fallback)
 # ---------------------------------------------------------------------------
+
+# Gmail IMAP configuration — set in .env to enable real Gmail
+GMAIL_USER = os.getenv("GMAIL_USER", "")
+GMAIL_APP_PASSWORD = os.getenv("GMAIL_APP_PASSWORD", "")
+GMAIL_FOLDER = os.getenv("GMAIL_FOLDER", "INBOX")
+USE_REAL_GMAIL = bool(GMAIL_USER and GMAIL_APP_PASSWORD)
+
+
+def _fetch_gmail_inbox(max_emails: int = 10) -> list[dict]:
+    """Fetch recent emails from Gmail via IMAP. Returns list of email dicts."""
+    try:
+        mail = imaplib.IMAP4_SSL("imap.gmail.com")
+        mail.login(GMAIL_USER, GMAIL_APP_PASSWORD)
+        mail.select(GMAIL_FOLDER)
+
+        # Search for recent emails
+        status, data = mail.search(None, "ALL")
+        if status != "OK" or not data[0]:
+            mail.logout()
+            return []
+
+        # Get the most recent N email IDs
+        email_ids = data[0].split()
+        recent_ids = email_ids[-max_emails:]  # Last N emails
+        recent_ids.reverse()  # Newest first
+
+        emails = []
+        for idx, eid in enumerate(recent_ids, 1):
+            status, msg_data = mail.fetch(eid, "(FLAGS RFC822.SIZE BODY.PEEK[HEADER.FIELDS (FROM SUBJECT DATE)])")
+            if status != "OK":
+                continue
+
+            # Parse flags for read/unread
+            flags_raw = msg_data[0][0].decode() if isinstance(msg_data[0][0], bytes) else str(msg_data[0][0])
+            is_read = "\\Seen" in flags_raw
+
+            # Parse header
+            header_raw = msg_data[0][1]
+            msg = email_lib.message_from_bytes(header_raw)
+
+            # Decode subject
+            subject = ""
+            if msg["Subject"]:
+                decoded = decode_header(msg["Subject"])
+                subject = "".join(
+                    part.decode(enc or "utf-8") if isinstance(part, bytes) else part
+                    for part, enc in decoded
+                )
+
+            # Decode from
+            sender = ""
+            if msg["From"]:
+                decoded = decode_header(msg["From"])
+                sender = "".join(
+                    part.decode(enc or "utf-8") if isinstance(part, bytes) else part
+                    for part, enc in decoded
+                )
+
+            # Parse date
+            date_str = msg["Date"] or ""
+            try:
+                dt = email_lib.utils.parsedate_to_datetime(date_str)
+                date_str = dt.strftime("%B %d, %Y at %I:%M %p")
+            except Exception:
+                pass
+
+            emails.append({
+                "id": idx,
+                "uid": eid.decode() if isinstance(eid, bytes) else str(eid),
+                "from": sender,
+                "subject": subject,
+                "date": date_str,
+                "is_read": is_read,
+            })
+
+        mail.logout()
+        return emails
+    except Exception as e:
+        return []
+
+
+def _fetch_gmail_message(email_id: int) -> dict | None:
+    """Fetch a single email's full content by its position index (1-based)."""
+    try:
+        mail = imaplib.IMAP4_SSL("imap.gmail.com")
+        mail.login(GMAIL_USER, GMAIL_APP_PASSWORD)
+        mail.select(GMAIL_FOLDER)
+
+        status, data = mail.search(None, "ALL")
+        if status != "OK" or not data[0]:
+            mail.logout()
+            return None
+
+        email_ids = data[0].split()
+        email_ids.reverse()  # Newest first, matching _fetch_gmail_inbox order
+
+        if email_id < 1 or email_id > len(email_ids):
+            mail.logout()
+            return None
+
+        uid = email_ids[email_id - 1]
+
+        # Fetch full message and mark as read
+        status, msg_data = mail.fetch(uid, "(RFC822)")
+        if status != "OK":
+            mail.logout()
+            return None
+
+        raw_msg = msg_data[0][1]
+        msg = email_lib.message_from_bytes(raw_msg)
+
+        # Mark as read
+        mail.store(uid, "+FLAGS", "\\Seen")
+
+        # Decode subject
+        subject = ""
+        if msg["Subject"]:
+            decoded = decode_header(msg["Subject"])
+            subject = "".join(
+                part.decode(enc or "utf-8") if isinstance(part, bytes) else part
+                for part, enc in decoded
+            )
+
+        # Decode from
+        sender = ""
+        if msg["From"]:
+            decoded = decode_header(msg["From"])
+            sender = "".join(
+                part.decode(enc or "utf-8") if isinstance(part, bytes) else part
+                for part, enc in decoded
+            )
+
+        # Parse date
+        date_str = msg["Date"] or ""
+        try:
+            dt = email_lib.utils.parsedate_to_datetime(date_str)
+            date_str = dt.strftime("%B %d, %Y at %I:%M %p")
+        except Exception:
+            pass
+
+        # Extract body text
+        body = ""
+        if msg.is_multipart():
+            for part in msg.walk():
+                content_type = part.get_content_type()
+                if content_type == "text/plain":
+                    payload = part.get_payload(decode=True)
+                    if payload:
+                        charset = part.get_content_charset() or "utf-8"
+                        body = payload.decode(charset, errors="replace")
+                    break
+            # Fallback to HTML if no plain text
+            if not body:
+                for part in msg.walk():
+                    if part.get_content_type() == "text/html":
+                        payload = part.get_payload(decode=True)
+                        if payload:
+                            charset = part.get_content_charset() or "utf-8"
+                            html = payload.decode(charset, errors="replace")
+                            # Strip HTML tags for plain text display
+                            body = re.sub(r'<[^>]+>', '', html)
+                            body = re.sub(r'\s+', ' ', body).strip()
+                        break
+        else:
+            payload = msg.get_payload(decode=True)
+            if payload:
+                charset = msg.get_content_charset() or "utf-8"
+                body = payload.decode(charset, errors="replace")
+
+        # Extract attachments
+        attachments = []
+        if msg.is_multipart():
+            for part in msg.walk():
+                filename = part.get_filename()
+                if filename:
+                    decoded_fn = decode_header(filename)
+                    filename = "".join(
+                        p.decode(enc or "utf-8") if isinstance(p, bytes) else p
+                        for p, enc in decoded_fn
+                    )
+                    size = len(part.get_payload(decode=True) or b"")
+                    attachments.append({"name": filename, "size_kb": round(size / 1024, 1)})
+
+        # Check for meeting links in body
+        meeting_link = None
+        meeting_patterns = [
+            r'https?://[\w.-]*zoom\.us/\S+',
+            r'https?://meet\.google\.com/\S+',
+            r'https?://teams\.microsoft\.com/\S+',
+        ]
+        for pattern in meeting_patterns:
+            match = re.search(pattern, body)
+            if match:
+                meeting_link = match.group(0)
+                break
+
+        mail.logout()
+        return {
+            "id": email_id,
+            "from": sender,
+            "subject": subject,
+            "date": date_str,
+            "body": body,
+            "is_read": True,
+            "attachments": attachments,
+            "meeting_link": meeting_link,
+        }
+    except Exception as e:
+        return None
+
+
+# Simulated inbox fallback for demo
 
 SIMULATED_INBOX = [
     {
@@ -1641,6 +1856,28 @@ def check_email() -> str:
     """Check the email inbox. Shows recent emails with sender, subject, and date.
     Use when the user says "check my email" or "do I have any messages?"
     """
+    # Use real Gmail if configured, otherwise simulated inbox
+    if USE_REAL_GMAIL:
+        emails = _fetch_gmail_inbox(max_emails=10)
+        if not emails:
+            return "I couldn't connect to your email right now. Let's try again in a moment."
+        unread = sum(1 for e in emails if not e["is_read"])
+        lines = [f"You have {len(emails)} emails ({unread} unread):\n"]
+        for e in emails:
+            status = "NEW" if not e["is_read"] else "READ"
+            scan_text = f"{e['from']} {e['subject']}"
+            scan = _scan_for_scam(scan_text)
+            warning = " ⚠️ SUSPICIOUS" if scan["risk"] != "SAFE" else ""
+            sender = e["from"].split("<")[0].strip()
+            try:
+                dt = datetime.strptime(e["date"], "%B %d, %Y at %I:%M %p")
+                short_date = dt.strftime("%b %d, %I:%M %p")
+            except ValueError:
+                short_date = e["date"]
+            lines.append(f"{e['id']}. [{status}] {sender} — \"{e['subject']}\" ({short_date}){warning}")
+        return "\n".join(lines)
+
+    # Simulated inbox fallback
     active = [e for e in SIMULATED_INBOX if e["id"] not in _deleted_ids]
 
     if not active:
@@ -1675,18 +1912,22 @@ def read_email(email_id: int) -> str:
     Args:
         email_id: The number of the email to read (from the inbox list)
     """
-    if email_id in _deleted_ids:
-        return "That email was already deleted."
-
-    email = next((e for e in SIMULATED_INBOX if e["id"] == email_id), None)
-    if not email:
-        return f"I can't find email #{email_id}. Try checking your inbox first to see what's there."
-
-    # Mark as read
-    email["is_read"] = True
+    # Use real Gmail if configured
+    if USE_REAL_GMAIL:
+        email = _fetch_gmail_message(email_id)
+        if not email:
+            return f"I can't find email #{email_id}. Try checking your inbox first to see what's there."
+    else:
+        if email_id in _deleted_ids:
+            return "That email was already deleted."
+        email = next((e for e in SIMULATED_INBOX if e["id"] == email_id), None)
+        if not email:
+            return f"I can't find email #{email_id}. Try checking your inbox first to see what's there."
+        # Mark as read
+        email["is_read"] = True
 
     # Auto-scan for scam indicators
-    full_text = f"{email['from']} {email['subject']} {email['body']}"
+    full_text = f"{email['from']} {email['subject']} {email.get('body', '')}"
     scan = _scan_for_scam(full_text)
 
     lines = []
