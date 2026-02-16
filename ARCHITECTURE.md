@@ -170,7 +170,7 @@ The dispatch layer is deterministic — `open_application("Word")` always calls 
 ### Chat Message Flow
 
 ```mermaid
-%%{init: {'theme': 'base', 'themeVariables': { 'primaryColor': '#3E2723', 'primaryTextColor': '#FFF8F0', 'primaryBorderColor': '#4CAF50', 'lineColor': '#FFCC80', 'secondaryColor': '#5D4037'}}}%%
+%%{init: {'theme': 'base', 'themeVariables': { 'primaryColor': '#3E2723', 'primaryTextColor': '#FFF8F0', 'primaryBorderColor': '#4CAF50', 'lineColor': '#5D4037', 'secondaryColor': '#5D4037', 'signalColor': '#3E2723', 'signalTextColor': '#3E2723', 'labelTextColor': '#3E2723', 'actorTextColor': '#FFF8F0', 'noteBkgColor': '#FFCC80', 'noteTextColor': '#3E2723'}}}%%
 
 sequenceDiagram
     participant User
@@ -241,7 +241,7 @@ flowchart LR
 ### Family SMS Flow
 
 ```mermaid
-%%{init: {'theme': 'base', 'themeVariables': { 'primaryColor': '#3E2723', 'primaryTextColor': '#FFF8F0', 'primaryBorderColor': '#4CAF50', 'lineColor': '#FFCC80', 'secondaryColor': '#5D4037'}}}%%
+%%{init: {'theme': 'base', 'themeVariables': { 'primaryColor': '#3E2723', 'primaryTextColor': '#FFF8F0', 'primaryBorderColor': '#4CAF50', 'lineColor': '#5D4037', 'secondaryColor': '#5D4037', 'signalColor': '#3E2723', 'signalTextColor': '#3E2723', 'labelTextColor': '#3E2723', 'actorTextColor': '#FFF8F0', 'noteBkgColor': '#FFCC80', 'noteTextColor': '#3E2723'}}}%%
 
 sequenceDiagram
     participant Daughter as Sarah (SMS)
@@ -270,33 +270,22 @@ sequenceDiagram
 
 The core design principle: **never show an error when a fallback exists.**
 
-```
-User says: "Open Word and type a letter"
+```mermaid
+%%{init: {'theme': 'base', 'themeVariables': { 'primaryColor': '#3E2723', 'primaryTextColor': '#FFF8F0', 'primaryBorderColor': '#4CAF50', 'lineColor': '#5D4037', 'secondaryColor': '#5D4037', 'tertiaryColor': '#3E2723'}}}%%
 
-┌─────────────────────────────────────────────────┐
-│ Tier 1: win32com (Direct COM Automation)         │
-│ • Opens Word via Dispatch("Word.Application")   │
-│ • Types via Selection.TypeText()                 │
-│ • Saves via doc.SaveAs2()                        │
-│ • Success rate: ~100%                            │
-├─────────────────────────────────────────────────┤
-│ Tier 2: pywinauto (UI Automation)         ▲ FAIL│
-│ • Finds windows by title/class                   │
-│ • Clicks buttons, types into fields              │
-│ • Uses UIA backend for modern apps               │
-│ • Success rate: ~85%                             │
-├─────────────────────────────────────────────────┤
-│ Tier 3: MCP Server Tools                  ▲ FAIL│
-│ • Filesystem operations via NPX server           │
-│ • Structured file read/write                     │
-│ • Success rate: ~95% (for file ops)              │
-├─────────────────────────────────────────────────┤
-│ Tier 4: Claude Vision (Fallback)          ▲ FAIL│
-│ • Screenshot → describe what's on screen         │
-│ • Guide user through manual steps                │
-│ • Always available as last resort                │
-│ • Success rate: 100% (guidance, not automation)  │
-└─────────────────────────────────────────────────┘
+flowchart TB
+    USER["Open Word and type a letter"] --> T1
+
+    T1["Tier 1: win32com — ~100%"]
+    T1 -->|FAIL| T2["Tier 2: pywinauto — ~85%"]
+    T2 -->|FAIL| T3["Tier 3: MCP Server — ~95%"]
+    T3 -->|FAIL| T4["Tier 4: Claude Vision — 100%"]
+
+    style T1 fill:#4CAF50,color:#FFF8F0
+    style T2 fill:#5D4037,color:#FFF8F0
+    style T3 fill:#5D4037,color:#FFF8F0
+    style T4 fill:#8D6E63,color:#FFF8F0
+    style USER fill:#3E2723,color:#FFF8F0
 ```
 
 **Who decides which tier?** Claude Opus 4.6. The model reads the user's request, evaluates which tools are appropriate, and calls them. If Tier 1 (win32com) returns an error, Opus 4.6 sees the error in the tool result and autonomously decides to try Tier 2. If all automation fails, Opus 4.6 calls `read_my_screen()` to see what's happening and guides the user through it. The fallback logic isn't hardcoded — it emerges from the model's reasoning about what to do when a tool fails.
