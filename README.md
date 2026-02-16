@@ -54,6 +54,12 @@ Your mother says *"help me find that photo from Christmas."* Claude Opus 4.6 und
 
 ---
 
+> **Hackathon Track: Break the Barriers** — Take something powerful that's locked behind expertise, cost, or infrastructure and put it in everyone's hands.
+
+TechBuddy takes computing — something locked behind digital literacy — and puts it in the hands of 55 million elderly Americans who can't navigate menus, jargon, or dialog boxes, using nothing but a conversation.
+
+---
+
 ## Demo
 
 <p align="center">
