@@ -27,6 +27,12 @@
   <img src="assets/techbuddy-overview.png" width="800" alt="TechBuddy overview"/>
 </p>
 
+**Hackathon Track: Break the Barriers** — Take something powerful that's locked behind expertise, cost, or infrastructure and put it in everyone's hands.
+
+TechBuddy takes computing — something locked behind digital literacy — and puts it in the hands of 55 million elderly Americans who can't navigate menus, jargon, or dialog boxes, using nothing but a conversation.
+
+---
+
 ## The Problem
 
 **55 million** Americans are over 65.
@@ -51,12 +57,6 @@ Your mother says *"help me find that photo from Christmas."* Claude Opus 4.6 und
 | "Remember my doctor is Dr. Patel" | Saves to local TechBuddy Notes — private, never in the cloud | Recalls it next time: "Your doctor is Dr. Patel" |
 
 **This isn't Computer Use API guessing pixel coordinates (22% success rate).** We gave Claude Opus 4.6 deterministic tools — `win32com`, `imaplib`, `PowerShell`, `PIL` — so the brain controls the computer with **near-100% reliability**. Same intelligence. Better hands.
-
----
-
-> **Hackathon Track: Break the Barriers** — Take something powerful that's locked behind expertise, cost, or infrastructure and put it in everyone's hands.
-
-TechBuddy takes computing — something locked behind digital literacy — and puts it in the hands of 55 million elderly Americans who can't navigate menus, jargon, or dialog boxes, using nothing but a conversation.
 
 ---
 
