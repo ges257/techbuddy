@@ -221,21 +221,14 @@ python frontend/app.py
 
 ## Project Structure
 
-```
-techbuddy/
-├── frontend/
-│   ├── app.py                    # Flask + Claude Opus 4.6 API (1,044 lines)
-│   └── templates/chat.html       # Full accessible UI (1,157 lines)
-├── mcp_servers/
-│   └── screen_dispatch.py        # 35 tool implementations (2,772 lines)
-├── hooks/                        # 3 Claude Code hook scripts
-├── tests/                        # 143 tests across 5 files
-├── .claude/                      # Rules, skills, subagents
-├── CLAUDE.md                     # Project blueprint
-├── ARCHITECTURE.md               # System design deep dive
-├── CHALLENGES.md                 # 8 real challenges, solved
-└── LEARNINGS.md                  # Insights and trade-offs
-```
+| File | What | Lines |
+|---|---|---|
+| [`frontend/app.py`](frontend/app.py) | Flask + Claude Opus 4.6 API | 1,044 |
+| [`frontend/templates/chat.html`](frontend/templates/chat.html) | Full accessible UI | 1,157 |
+| [`mcp_servers/screen_dispatch.py`](mcp_servers/screen_dispatch.py) | 35 tool implementations | 2,772 |
+| [`hooks/`](hooks/) | 3 Claude Code hook scripts | — |
+| [`tests/`](tests/) | 143 tests across 5 files | — |
+| [`.claude/`](.claude/) | Rules, skills, subagents | — |
 
 ---
 
