@@ -2,6 +2,10 @@
 
 > Technical design and system flow for TechBuddy — an AI companion that helps elderly people use their computer through natural conversation, powered by Claude Opus 4.6.
 
+<p align="center">
+  <img src="assets/architecture-overview.png" width="800" alt="TechBuddy architecture overview"/>
+</p>
+
 ---
 
 ## High-Level Overview

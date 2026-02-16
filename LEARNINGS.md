@@ -2,6 +2,10 @@
 
 > What we learned about building with Claude Opus 4.6 for elderly users — the insights that shaped the architecture, the trade-offs that defined the product, and the edge cases that kept us honest.
 
+<p align="center">
+  <img src="assets/learnings-overview.png" width="800" alt="TechBuddy learnings overview"/>
+</p>
+
 ---
 
 ## Surprising Discoveries About Opus 4.6
