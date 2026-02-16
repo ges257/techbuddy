@@ -159,7 +159,7 @@ flowchart LR
 
 | Primitive | What | Why |
 |---|---|---|
-| **CLAUDE.md** | 75-line project blueprint | Architecture, tools, accessibility, gotchas — all in one file |
+| **[CLAUDE.md](CLAUDE.md)** | 75-line project blueprint | Architecture, tools, accessibility, gotchas — all in one file |
 | **Rules** | 3 files in `.claude/rules/` | WCAG accessibility, hook development, MCP server design |
 | **Hooks** | 3 scripts in `hooks/` | Validate sends, check accessibility, verify safety |
 | **Skills** | 2 in `.claude/skills/` | Interface design, frontend design |
@@ -198,6 +198,13 @@ flowchart LR
 **[Claude Code Setup](CLAUDE_CODE.md)**
 
 <strong>Every primitive, workflow pattern, and advanced technique used to build TechBuddy with Claude Code.</strong>
+
+</td>
+<td align="center">
+
+**[CLAUDE.md](CLAUDE.md)**
+
+<strong>The actual 75-line project blueprint that Claude Code reads every session. The project's DNA.</strong>
 
 </td>
 </tr>

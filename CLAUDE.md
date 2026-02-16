@@ -1,3 +1,19 @@
+<p align="center">
+  <img src="https://capsule-render.vercel.app/api?type=waving&color=FFCCBC&fontColor=3E2723&height=180&section=header&text=CLAUDE.md&fontSize=45&fontAlignY=35&descAlignY=55&desc=The%20Project%20Blueprint&descSize=16&animation=fadeIn" width="100%"/>
+</p>
+
+> This file is loaded automatically by Claude Code at the start of every session. It defines the project's architecture, accessibility standards, coding conventions, and hard-won gotchas. It's the project's DNA.
+
+<p align="center">
+  <a href="README.md"><img src="https://img.shields.io/badge/README-Home-4CAF50?style=for-the-badge" alt="README"/></a>
+  <a href="ARCHITECTURE.md"><img src="https://img.shields.io/badge/Architecture-Deep_Dive-4CAF50?style=for-the-badge" alt="Architecture"/></a>
+  <a href="CHALLENGES.md"><img src="https://img.shields.io/badge/Challenges-8_Solved-FFCC80?style=for-the-badge" alt="Challenges"/></a>
+  <a href="LEARNINGS.md"><img src="https://img.shields.io/badge/Learnings-Trade--offs-64B5F6?style=for-the-badge" alt="Learnings"/></a>
+  <a href="CLAUDE_CODE.md"><img src="https://img.shields.io/badge/Claude_Code-Setup-8D6E63?style=for-the-badge" alt="Claude Code Setup"/></a>
+</p>
+
+---
+
 # TechBuddy — Claude Code for Elderly People
 
 ## What This Is
@@ -73,3 +89,17 @@ AI chat assistant helping elderly people use their computer through natural conv
 
 ## When Compacting
 Preserve: modified files list, current module being worked on, which subagents are done vs pending, the tiered fallback architecture, accessibility standards.
+
+---
+
+<p align="center">
+  <a href="README.md"><img src="https://img.shields.io/badge/README-Home-4CAF50?style=for-the-badge" alt="README"/></a>
+  <a href="ARCHITECTURE.md"><img src="https://img.shields.io/badge/Architecture-Deep_Dive-4CAF50?style=for-the-badge" alt="Architecture"/></a>
+  <a href="CHALLENGES.md"><img src="https://img.shields.io/badge/Challenges-8_Solved-FFCC80?style=for-the-badge" alt="Challenges"/></a>
+  <a href="LEARNINGS.md"><img src="https://img.shields.io/badge/Learnings-Trade--offs-64B5F6?style=for-the-badge" alt="Learnings"/></a>
+  <a href="CLAUDE_CODE.md"><img src="https://img.shields.io/badge/Claude_Code-Setup-8D6E63?style=for-the-badge" alt="Claude Code Setup"/></a>
+</p>
+
+<p align="center">
+  <img src="https://capsule-render.vercel.app/api?type=waving&color=FFCCBC&height=100&section=footer" width="100%"/>
+</p>

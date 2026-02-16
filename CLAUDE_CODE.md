@@ -69,7 +69,7 @@ flowchart TB
 
 ### 1. CLAUDE.md — Always-On Project Context
 
-**File:** `CLAUDE.md` (75 lines)
+**File:** [`CLAUDE.md`](CLAUDE.md) (75 lines)
 **What it does:** Loaded every time Claude Code starts a session. Gives Claude the full project context without being told.
 
 **Cat Wu's rule:** *"Would removing this line cause Claude to make mistakes? If not, cut it."*
