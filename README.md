@@ -63,12 +63,10 @@ Your mother says *"help me find that photo from Christmas."* Claude Opus 4.6 und
 ## Demo
 
 <p align="center">
-  <a href="#">
+  <a href="https://drive.google.com/file/d/1KAKuiwh3U-ULoVYAx983S1WF6-_SN4Fp/view">
     <img src="https://img.shields.io/badge/▶_Watch_Demo-3_min-4CAF50?style=for-the-badge&amp;logo=youtube&amp;logoColor=FFF8F0" alt="Watch Demo"/>
   </a>
 </p>
-
-> Demo video link will be added before submission.
 
 <p align="center">
   <a href="assets/TechBuddy_Restoring_Independence.pdf">
