@@ -48,6 +48,7 @@ Your mother says *"help me find that photo from Christmas."* Claude Opus 4.6 und
 | "My printer isn't working" | Runs PowerShell diagnostics, finds stuck print queue | Clears the queue, confirms it's printing |
 | "Can you help me join the Zoom call?" | Searches email for meeting link, identifies PMI | Opens Zoom, walks through joining step by step |
 | "Is this email real or a scam?" | 3-layer analysis with extended thinking and web verification | Explains *why* it's a scam, gives the real phone number |
+| "Remember my doctor is Dr. Patel" | Saves to local TechBuddy Notes — private, never in the cloud | Recalls it next time: "Your doctor is Dr. Patel" |
 
 **This isn't Computer Use API guessing pixel coordinates (22% success rate).** We gave Claude Opus 4.6 deterministic tools — `win32com`, `imaplib`, `PowerShell`, `PIL` — so the brain controls the computer with **near-100% reliability**. Same intelligence. Better hands.
 
