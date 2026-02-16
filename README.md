@@ -65,7 +65,9 @@ Your mother says *"help me find that photo from Christmas."* Claude Opus 4.6 und
 > Demo video link will be added before submission.
 
 <p align="center">
-  <a href="assets/TechBuddy_Restoring_Independence.pdf">See Presentation Deck (PDF)</a>
+  <a href="assets/TechBuddy_Restoring_Independence.pdf">
+    <img src="https://img.shields.io/badge/📄_Presentation_Deck-PDF-FFCC80?style=for-the-badge&amp;logoColor=3E2723" alt="Presentation Deck"/>
+  </a>
 </p>
 
 ---
