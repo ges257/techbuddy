@@ -18,7 +18,7 @@
 </p>
 
 <p align="center">
-  <a href="ARCHITECTURE.md">Architecture</a> · <a href="CHALLENGES.md">Challenges</a> · <a href="LEARNINGS.md">Learnings</a> · <a href="CLAUDE_CODE.md">Claude Code</a> · <a href="CLAUDE.md">CLAUDE.md</a>
+  <a href="ARCHITECTURE.md">Architecture</a> · <a href="CHALLENGES.md">Challenges</a> · <a href="LEARNINGS.md">Learnings</a> · <a href="CLAUDE_CODE.md">Claude Code</a> · <a href="CLAUDE.md">CLAUDE.md</a> · <a href="https://github.com/ges257/techbuddy/tree/main">Browse the Code</a>
 </p>
 
 ---
