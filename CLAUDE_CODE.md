@@ -9,10 +9,7 @@
 </p>
 
 <p align="center">
-  <a href="README.md"><img src="https://img.shields.io/badge/README-Home-4CAF50?style=for-the-badge" alt="README"/></a>
-  <a href="ARCHITECTURE.md"><img src="https://img.shields.io/badge/Architecture-Deep_Dive-4CAF50?style=for-the-badge" alt="Architecture"/></a>
-  <a href="CHALLENGES.md"><img src="https://img.shields.io/badge/Challenges-8_Solved-FFCC80?style=for-the-badge" alt="Challenges"/></a>
-  <a href="LEARNINGS.md"><img src="https://img.shields.io/badge/Learnings-Trade--offs-64B5F6?style=for-the-badge" alt="Learnings"/></a>
+  <a href="README.md">README</a> · <a href="ARCHITECTURE.md">Architecture</a> · <a href="CHALLENGES.md">Challenges</a> · <a href="LEARNINGS.md">Learnings</a> · <a href="CLAUDE.md">CLAUDE.md</a>
 </p>
 
 ---
@@ -461,10 +458,7 @@ The primitives scale.
 ---
 
 <p align="center">
-  <a href="README.md"><img src="https://img.shields.io/badge/README-Home-4CAF50?style=for-the-badge" alt="README"/></a>
-  <a href="ARCHITECTURE.md"><img src="https://img.shields.io/badge/Architecture-Deep_Dive-4CAF50?style=for-the-badge" alt="Architecture"/></a>
-  <a href="CHALLENGES.md"><img src="https://img.shields.io/badge/Challenges-8_Solved-FFCC80?style=for-the-badge" alt="Challenges"/></a>
-  <a href="LEARNINGS.md"><img src="https://img.shields.io/badge/Learnings-Trade--offs-64B5F6?style=for-the-badge" alt="Learnings"/></a>
+  <a href="README.md">README</a> · <a href="ARCHITECTURE.md">Architecture</a> · <a href="CHALLENGES.md">Challenges</a> · <a href="LEARNINGS.md">Learnings</a> · <a href="CLAUDE.md">CLAUDE.md</a>
 </p>
 
 <p align="center">

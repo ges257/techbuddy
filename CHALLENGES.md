@@ -5,10 +5,7 @@
 > Eight real problems from six days of building TechBuddy. Each one looked simple on the surface. None of them were.
 
 <p align="center">
-  <a href="README.md"><img src="https://img.shields.io/badge/README-Home-4CAF50?style=for-the-badge" alt="README"/></a>
-  <a href="ARCHITECTURE.md"><img src="https://img.shields.io/badge/Architecture-Deep_Dive-4CAF50?style=for-the-badge" alt="Architecture"/></a>
-  <a href="LEARNINGS.md"><img src="https://img.shields.io/badge/Learnings-Trade--offs-64B5F6?style=for-the-badge" alt="Learnings"/></a>
-  <a href="CLAUDE_CODE.md"><img src="https://img.shields.io/badge/Claude_Code-Setup-8D6E63?style=for-the-badge" alt="Claude Code Setup"/></a>
+  <a href="README.md">README</a> · <a href="ARCHITECTURE.md">Architecture</a> · <a href="LEARNINGS.md">Learnings</a> · <a href="CLAUDE_CODE.md">Claude Code</a> · <a href="CLAUDE.md">CLAUDE.md</a>
 </p>
 
 TechBuddy is built for Anthropic's **Built with Opus 4.6** hackathon. Every challenge below involves Claude Opus 4.6 — the brain that makes every decision, the reasoning engine behind scam detection, the vision system that reads screens, and the personality that speaks to elderly users with patience and warmth. The tools are hands and eyes. Opus 4.6 is the mind.
@@ -370,8 +367,5 @@ Real Gmail IMAP integration working end-to-end. Six demo emails (including one s
 *Every challenge above is real — encountered and solved during six days of building TechBuddy for the Built with Opus 4.6 hackathon, February 10-16, 2026.*
 
 <p align="center">
-  <a href="README.md"><img src="https://img.shields.io/badge/README-Home-4CAF50?style=for-the-badge" alt="README"/></a>
-  <a href="ARCHITECTURE.md"><img src="https://img.shields.io/badge/Architecture-Deep_Dive-4CAF50?style=for-the-badge" alt="Architecture"/></a>
-  <a href="LEARNINGS.md"><img src="https://img.shields.io/badge/Learnings-Trade--offs-64B5F6?style=for-the-badge" alt="Learnings"/></a>
-  <a href="CLAUDE_CODE.md"><img src="https://img.shields.io/badge/Claude_Code-Setup-8D6E63?style=for-the-badge" alt="Claude Code Setup"/></a>
+  <a href="README.md">README</a> · <a href="ARCHITECTURE.md">Architecture</a> · <a href="LEARNINGS.md">Learnings</a> · <a href="CLAUDE_CODE.md">Claude Code</a> · <a href="CLAUDE.md">CLAUDE.md</a>
 </p>
