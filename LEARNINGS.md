@@ -6,6 +6,13 @@
   <img src="assets/learnings-overview.png" width="800" alt="TechBuddy learnings overview"/>
 </p>
 
+<p align="center">
+  <a href="README.md"><img src="https://img.shields.io/badge/README-Home-4CAF50?style=for-the-badge" alt="README"/></a>
+  <a href="ARCHITECTURE.md"><img src="https://img.shields.io/badge/Architecture-Deep_Dive-4CAF50?style=for-the-badge" alt="Architecture"/></a>
+  <a href="CHALLENGES.md"><img src="https://img.shields.io/badge/Challenges-8_Solved-FFCC80?style=for-the-badge" alt="Challenges"/></a>
+  <a href="CLAUDE_CODE.md"><img src="https://img.shields.io/badge/Claude_Code-Setup-8D6E63?style=for-the-badge" alt="Claude Code Setup"/></a>
+</p>
+
 ---
 
 ## Surprising Discoveries About Opus 4.6
@@ -201,3 +208,10 @@ There's a meta-level recursion here: Claude Code — an AI-powered CLI — was u
 ---
 
 *Built over six days for Anthropic's Built with Opus 4.6 hackathon. Every insight above was earned through real building, real testing, and real iteration — not hypothetical planning.*
+
+<p align="center">
+  <a href="README.md"><img src="https://img.shields.io/badge/README-Home-4CAF50?style=for-the-badge" alt="README"/></a>
+  <a href="ARCHITECTURE.md"><img src="https://img.shields.io/badge/Architecture-Deep_Dive-4CAF50?style=for-the-badge" alt="Architecture"/></a>
+  <a href="CHALLENGES.md"><img src="https://img.shields.io/badge/Challenges-8_Solved-FFCC80?style=for-the-badge" alt="Challenges"/></a>
+  <a href="CLAUDE_CODE.md"><img src="https://img.shields.io/badge/Claude_Code-Setup-8D6E63?style=for-the-badge" alt="Claude Code Setup"/></a>
+</p>

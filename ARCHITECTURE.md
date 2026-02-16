@@ -6,6 +6,13 @@
   <img src="assets/architecture-overview.png" width="800" alt="TechBuddy architecture overview"/>
 </p>
 
+<p align="center">
+  <a href="README.md"><img src="https://img.shields.io/badge/README-Home-4CAF50?style=for-the-badge" alt="README"/></a>
+  <a href="CHALLENGES.md"><img src="https://img.shields.io/badge/Challenges-8_Solved-FFCC80?style=for-the-badge" alt="Challenges"/></a>
+  <a href="LEARNINGS.md"><img src="https://img.shields.io/badge/Learnings-Trade--offs-64B5F6?style=for-the-badge" alt="Learnings"/></a>
+  <a href="CLAUDE_CODE.md"><img src="https://img.shields.io/badge/Claude_Code-Setup-8D6E63?style=for-the-badge" alt="Claude Code Setup"/></a>
+</p>
+
 ---
 
 ## High-Level Overview
@@ -391,3 +398,10 @@ techbuddy/
 ---
 
 *Architecture designed for reliability, accessibility, and elderly safety — every design decision prioritizes "it just works" over elegance.*
+
+<p align="center">
+  <a href="README.md"><img src="https://img.shields.io/badge/README-Home-4CAF50?style=for-the-badge" alt="README"/></a>
+  <a href="CHALLENGES.md"><img src="https://img.shields.io/badge/Challenges-8_Solved-FFCC80?style=for-the-badge" alt="Challenges"/></a>
+  <a href="LEARNINGS.md"><img src="https://img.shields.io/badge/Learnings-Trade--offs-64B5F6?style=for-the-badge" alt="Learnings"/></a>
+  <a href="CLAUDE_CODE.md"><img src="https://img.shields.io/badge/Claude_Code-Setup-8D6E63?style=for-the-badge" alt="Claude Code Setup"/></a>
+</p>

@@ -8,6 +8,13 @@
   <img src="assets/claude-code-overview.png" width="800" alt="Claude Code architecture overview"/>
 </p>
 
+<p align="center">
+  <a href="README.md"><img src="https://img.shields.io/badge/README-Home-4CAF50?style=for-the-badge" alt="README"/></a>
+  <a href="ARCHITECTURE.md"><img src="https://img.shields.io/badge/Architecture-Deep_Dive-4CAF50?style=for-the-badge" alt="Architecture"/></a>
+  <a href="CHALLENGES.md"><img src="https://img.shields.io/badge/Challenges-8_Solved-FFCC80?style=for-the-badge" alt="Challenges"/></a>
+  <a href="LEARNINGS.md"><img src="https://img.shields.io/badge/Learnings-Trade--offs-64B5F6?style=for-the-badge" alt="Learnings"/></a>
+</p>
+
 ---
 
 ## The Development Philosophy
@@ -454,10 +461,10 @@ The primitives scale.
 ---
 
 <p align="center">
-  <a href="ARCHITECTURE.md"><img src="https://img.shields.io/badge/System_Architecture-Deep_Dive-4CAF50?style=flat-square" alt="Architecture"/></a>
-  <a href="CHALLENGES.md"><img src="https://img.shields.io/badge/Challenges-8_Problems_Solved-FFCC80?style=flat-square" alt="Challenges"/></a>
-  <a href="LEARNINGS.md"><img src="https://img.shields.io/badge/Learnings-Trade--offs_%26_Insights-FFCCBC?style=flat-square" alt="Learnings"/></a>
-  <a href="README.md"><img src="https://img.shields.io/badge/README-The_Pitch-3E2723?style=flat-square&labelColor=FFCCBC" alt="README"/></a>
+  <a href="README.md"><img src="https://img.shields.io/badge/README-Home-4CAF50?style=for-the-badge" alt="README"/></a>
+  <a href="ARCHITECTURE.md"><img src="https://img.shields.io/badge/Architecture-Deep_Dive-4CAF50?style=for-the-badge" alt="Architecture"/></a>
+  <a href="CHALLENGES.md"><img src="https://img.shields.io/badge/Challenges-8_Solved-FFCC80?style=for-the-badge" alt="Challenges"/></a>
+  <a href="LEARNINGS.md"><img src="https://img.shields.io/badge/Learnings-Trade--offs-64B5F6?style=for-the-badge" alt="Learnings"/></a>
 </p>
 
 <p align="center">

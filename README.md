@@ -17,6 +17,13 @@
   <strong>TechBuddy is that — but for the 60+ generation.</strong>
 </p>
 
+<p align="center">
+  <a href="ARCHITECTURE.md"><img src="https://img.shields.io/badge/Architecture-Deep_Dive-4CAF50?style=for-the-badge" alt="Architecture"/></a>
+  <a href="CHALLENGES.md"><img src="https://img.shields.io/badge/Challenges-8_Solved-FFCC80?style=for-the-badge" alt="Challenges"/></a>
+  <a href="LEARNINGS.md"><img src="https://img.shields.io/badge/Learnings-Trade--offs-64B5F6?style=for-the-badge" alt="Learnings"/></a>
+  <a href="CLAUDE_CODE.md"><img src="https://img.shields.io/badge/Claude_Code-Setup-8D6E63?style=for-the-badge" alt="Claude Code Setup"/></a>
+</p>
+
 ---
 
 <p align="center">
@@ -169,28 +176,28 @@ flowchart LR
 
 **[Architecture](ARCHITECTURE.md)**
 
-System design, data flows, component breakdown, Mermaid diagrams, every design decision explained.
+<strong>System design, data flows, component breakdown, Mermaid diagrams, every design decision explained.</strong>
 
 </td>
 <td align="center">
 
 **[Challenges](CHALLENGES.md)**
 
-8 real problems from 6 days of building. Each one looked simple. None of them were.
+<strong>8 real problems from 6 days of building. Each one looked simple. None of them were.</strong>
 
 </td>
 <td align="center">
 
 **[Learnings](LEARNINGS.md)**
 
-Surprising discoveries about Opus 4.6, trade-offs made, edge cases handled, what we'd do differently.
+<strong>Surprising discoveries about Opus 4.6, trade-offs made, edge cases handled, what we'd do differently.</strong>
 
 </td>
 <td align="center">
 
 **[Claude Code Setup](CLAUDE_CODE.md)**
 
-Every primitive, workflow pattern, and advanced technique used to build TechBuddy with Claude Code.
+<strong>Every primitive, workflow pattern, and advanced technique used to build TechBuddy with Claude Code.</strong>
 
 </td>
 </tr>
