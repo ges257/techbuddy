@@ -23,13 +23,13 @@
   <img src="assets/techbuddy-overview.png" width="800" alt="TechBuddy overview"/>
 </p>
 
-## You talk. Claude Opus 4.6 understands. Their computer does it.
+## You talk. Opus 4.6 understands. The computer does it.
 
 Your mother says *"help me find that photo from Christmas."* Claude Opus 4.6 understands what she means, searches her files, finds the photo, and shows it to her. No menus. No jargon. No calling you for help.
 
-| Your parent says... | Opus 4.6 understands and decides... | Their computer does it |
+| Your parent says... | Opus 4.6 decides and acts | The computer does it |
 |---|---|---|
-| "Check my email" | Connects to Gmail via IMAP, reads messages, spots a suspicious sender | Reads emails aloud, warns about the scam |
+| "Check my email" | Connects to Gmail, reads subjects, summarizes what's new | Reads emails aloud, highlights important ones |
 | "Help me write a letter to my friend" | Opens Word via COM automation, positions cursor | Types the letter, saves it |
 | "My printer isn't working" | Runs PowerShell diagnostics, finds stuck print queue | Clears the queue, confirms it's printing |
 | "Can you help me join the Zoom call?" | Searches email for meeting link, identifies PMI | Opens Zoom, walks through joining step by step |
@@ -86,13 +86,15 @@ Every menu, every dialog box, every "are you sure?" confirmation was built by an
 
 Every interaction routes through Claude Opus 4.6. The 35 tools are hands. **The model is the mind.**
 
-When a user says "check my email," Opus 4.6 doesn't follow a script. It reads the message, decides to call `check_email()`, spots suspicious content in one message, autonomously triggers `analyze_scam_risk()`, launches a **nested Opus 4.6 call** with its own extended thinking for deep fraud analysis, verifies claims via `search_web()`, and writes a warm, clear warning with the real phone number to call instead. **No code told it to do any of that.** The 10-round tool-use loop gives Opus 4.6 space to reason through multi-step problems autonomously.
+Opus 4.6 doesn't follow scripts. It reads a request, chooses the right tools, interprets results, and chains actions — finding files, writing letters, navigating email, troubleshooting printers, joining Zoom calls. The 10-round tool-use loop gives Opus 4.6 space to reason through multi-step problems autonomously. **No code tells it what to do next.**
+
+For example, when a user asks about a suspicious email, Opus 4.6 autonomously triggers `analyze_scam_risk()`, launches a **nested Opus 4.6 call** with its own extended thinking for deep analysis, verifies claims via `search_web()`, and writes a warm explanation with the real phone number to call instead — all without any hardcoded orchestration.
 
 ### Five Capabilities in Production
 
 | Capability | How TechBuddy Uses It |
 |---|---|
-| **Extended Thinking (Adaptive)** | Active on every API call. Scam Shield Layer 3 uses a *nested* Opus 4.6 call with its own extended thinking — model-within-model for safety-critical reasoning. Thinking traces surfaced in UI so family can verify *why* something was flagged. |
+| **Extended Thinking (Adaptive)** | Adapts reasoning depth to each task — quick decisions for simple requests, deep analysis for complex problems like scam detection or multi-step troubleshooting. Scam Shield uses a *nested* Opus 4.6 call with its own thinking chain. Thinking traces surfaced in UI so family can verify decisions. |
 | **Vision (2 pipelines)** | PIL screenshots of Windows desktop + xcrun screenshots of iPhone via Cloudflare Tunnel. Opus 4.6 interprets what's on screen, identifies UI elements, and guides users step-by-step through anything automation can't reach. |
 | **Tool Use (35 tools, 10 rounds)** | Opus 4.6 autonomously selects and chains tools across rounds. It reads results, decides next actions, handles errors by trying alternatives — all emergent from the model's reasoning. |
 | **Prompt Caching** | System message (personality + 35 tool schemas + safety rules) cached with `cache_control: {"type": "ephemeral"}` for faster repeat calls within a session. |
