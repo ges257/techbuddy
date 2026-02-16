@@ -19,6 +19,10 @@
 
 ---
 
+<p align="center">
+  <img src="assets/techbuddy-overview.png" width="800" alt="TechBuddy overview"/>
+</p>
+
 ## You talk. Claude Opus 4.6 understands. Their computer does it.
 
 Your mother says *"help me find that photo from Christmas."* Claude Opus 4.6 understands what she means, searches her files, finds the photo, and shows it to her. No menus. No jargon. No calling you for help.
