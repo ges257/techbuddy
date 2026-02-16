@@ -29,32 +29,11 @@
 
 ## The Problem
 
-<table>
-<tr>
-<td width="50%">
-
 **55 million** Americans are over 65.
-
 **25%** don't use the internet at all.
-
 **59%** are unfamiliar with copy and paste.
-
-**$4.8 billion** lost to elder fraud in 2024.
-
+**$4.9 billion** lost to internet scams targeting seniors in 2024.
 **77 hours/month** — average caregiver tech support burden.
-
-</td>
-<td width="50%">
-
-These aren't people who can't learn.
-
-These are people for whom **technology was never designed**.
-
-Every menu, every dialog box, every "are you sure?" confirmation was built by and for digital natives. TechBuddy replaces all of that with the most natural interface there is: **a conversation**.
-
-</td>
-</tr>
-</table>
 
 ---
 
