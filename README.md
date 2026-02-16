@@ -64,6 +64,10 @@ Your mother says *"help me find that photo from Christmas."* Claude Opus 4.6 und
 
 > Demo video link will be added before submission.
 
+<p align="center">
+  <a href="assets/TechBuddy_Restoring_Independence.pdf">See Presentation Deck (PDF)</a>
+</p>
+
 ---
 
 ## Claude Opus 4.6: The Brain
