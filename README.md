@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://capsule-render.vercel.app/api?type=waving&color=FFCCBC&fontColor=3E2723&height=200&section=header&text=TechBuddy&fontSize=60&desc=Claude%20Code%20for%20your%20elderly%20parents&descAlignY=70&descSize=20&animation=fadeIn" width="100%"/>
+  <img src="https://capsule-render.vercel.app/api?type=waving&color=FFCCBC&fontColor=3E2723&height=250&section=header&text=TechBuddy&fontSize=60&descAlignY=78&desc=Claude%20Code%20for%20your%20elderly%20parents&descSize=20&animation=fadeIn" width="100%"/>
 </p>
 
 <p align="center">
@@ -30,22 +30,6 @@
   <img src="assets/techbuddy-overview.png" width="800" alt="TechBuddy overview"/>
 </p>
 
-## You talk. Opus 4.6 understands. The computer does it.
-
-Your mother says *"help me find that photo from Christmas."* Claude Opus 4.6 understands what she means, searches her files, finds the photo, and shows it to her. No menus. No jargon. No calling you for help.
-
-| Your parent says... | Opus 4.6 decides and acts | The computer does it |
-|---|---|---|
-| "Check my email" | Connects to Gmail, reads subjects, summarizes what's new | Reads emails aloud, highlights important ones |
-| "Help me write a letter to my friend" | Opens Word via COM automation, positions cursor | Types the letter, saves it |
-| "My printer isn't working" | Runs PowerShell diagnostics, finds stuck print queue | Clears the queue, confirms it's printing |
-| "Can you help me join the Zoom call?" | Searches email for meeting link, identifies PMI | Opens Zoom, walks through joining step by step |
-| "Is this email real or a scam?" | 3-layer analysis with extended thinking and web verification | Explains *why* it's a scam, gives the real phone number |
-
-**This isn't Computer Use API guessing pixel coordinates (22% success rate).** We gave Claude Opus 4.6 deterministic tools — `win32com`, `imaplib`, `PowerShell`, `PIL` — so the brain controls the computer with **near-100% reliability**. Same intelligence. Better hands.
-
----
-
 ## The Problem
 
 <table>
@@ -74,6 +58,22 @@ Every menu, every dialog box, every "are you sure?" confirmation was built by an
 </td>
 </tr>
 </table>
+
+---
+
+## You talk. Opus 4.6 understands. The computer does it.
+
+Your mother says *"help me find that photo from Christmas."* Claude Opus 4.6 understands what she means, searches her files, finds the photo, and shows it to her. No menus. No jargon. No calling you for help.
+
+| Your parent says... | Opus 4.6 decides and acts | The computer does it |
+|---|---|---|
+| "Check my email" | Connects to Gmail, reads subjects, summarizes what's new | Reads emails aloud, highlights important ones |
+| "Help me write a letter to my friend" | Opens Word via COM automation, positions cursor | Types the letter, saves it |
+| "My printer isn't working" | Runs PowerShell diagnostics, finds stuck print queue | Clears the queue, confirms it's printing |
+| "Can you help me join the Zoom call?" | Searches email for meeting link, identifies PMI | Opens Zoom, walks through joining step by step |
+| "Is this email real or a scam?" | 3-layer analysis with extended thinking and web verification | Explains *why* it's a scam, gives the real phone number |
+
+**This isn't Computer Use API guessing pixel coordinates (22% success rate).** We gave Claude Opus 4.6 deterministic tools — `win32com`, `imaplib`, `PowerShell`, `PIL` — so the brain controls the computer with **near-100% reliability**. Same intelligence. Better hands.
 
 ---
 
