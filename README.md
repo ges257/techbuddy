@@ -159,30 +159,6 @@ flowchart LR
 
 ---
 
-## Quick Start
-
-```bash
-git clone https://github.com/ges257/techbuddy.git
-cd techbuddy
-python -m venv venv && source venv/bin/activate
-pip install -r frontend/requirements.txt
-```
-
-Create a `.env` file:
-```bash
-ANTHROPIC_API_KEY=your-key-here
-# Optional: Real Gmail
-USE_REAL_GMAIL=False
-```
-
-Run:
-```bash
-python frontend/app.py
-# Open http://localhost:5000
-```
-
----
-
 ## Deep Dives
 
 <table>
@@ -217,6 +193,30 @@ Every primitive, workflow pattern, and advanced technique used to build TechBudd
 </td>
 </tr>
 </table>
+
+---
+
+## Quick Start
+
+```bash
+git clone https://github.com/ges257/techbuddy.git
+cd techbuddy
+python -m venv venv && source venv/bin/activate
+pip install -r frontend/requirements.txt
+```
+
+Create a `.env` file:
+```bash
+ANTHROPIC_API_KEY=your-key-here
+# Optional: Real Gmail
+USE_REAL_GMAIL=False
+```
+
+Run:
+```bash
+python frontend/app.py
+# Open http://localhost:5000
+```
 
 ---
 

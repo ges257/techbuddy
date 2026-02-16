@@ -4,6 +4,10 @@
 
 > TechBuddy was built using Claude Code as a full development partner — not just an autocomplete engine. This document shows every primitive configured, every workflow pattern applied, and every advanced technique leveraged during six days of building.
 
+<p align="center">
+  <img src="assets/claude-code-overview.png" width="800" alt="Claude Code architecture overview"/>
+</p>
+
 ---
 
 ## The Development Philosophy
