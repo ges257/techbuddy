@@ -89,16 +89,14 @@ def test_destructive_keywords_exist():
 
 def test_simulate_endpoint_returns_json():
     client = _get_client()
-    with patch("frontend.app.call_claude") as mock_claude:
-        mock_claude.return_value = ("Hi Sarah, the printer looks fine!", "", [])
-        resp = client.post("/sms/simulate", json={
-            "from_number": "+15551234567",
-            "message": "mom says printer isnt working",
-        })
-        assert resp.status_code == 200
-        data = resp.get_json()
-        assert "reply" in data
-        assert "printer" in data["reply"].lower()
+    resp = client.post("/sms/simulate", json={
+        "from_number": "+15551234567",
+        "message": "mom says printer isnt working",
+    })
+    assert resp.status_code == 200
+    data = resp.get_json()
+    assert "reply" in data
+    assert "helping" in data["reply"].lower() or "got it" in data["reply"].lower()
 
 
 def test_simulate_pushes_to_pending():

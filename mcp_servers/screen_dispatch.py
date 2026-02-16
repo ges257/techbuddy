@@ -9,6 +9,10 @@ Tier 4: Claude Vision (text instructions) — slow fallback, ~90% reliable
 
 On WSL2/Linux: Tiers 1-2 are stubbed (Windows-only). Tier 3 (filesystem/web)
 and Tier 4 (Vision) work everywhere.
+
+Author: Gregory E. Schwartz
+Event:  Anthropic's Built with Opus 4.6: a Claude Code Hackathon
+Date:   February 2026
 """
 import json
 import os
@@ -504,8 +508,9 @@ def open_application(app_name: str) -> str:
     if not IS_WINDOWS:
         return f"To open {app_name}: look for it in your applications menu and click it."
 
-    # Word gets special handling via win32com to skip the start screen
+    # Word gets special handling to skip the start screen
     if name in ("word", "microsoft word", "ms word"):
+        # Tier 1: win32com — creates blank doc, skips start screen entirely
         try:
             import win32com.client
             word = win32com.client.Dispatch("Word.Application")
@@ -513,14 +518,41 @@ def open_application(app_name: str) -> str:
             word.Documents.Add()
             return "Word is open with a blank document. You can start typing!"
         except Exception:
-            # Fallback: launch directly
+            pass
+
+        # Tier 2: Launch with /n flag (new blank doc) + pywinauto start screen bypass
+        try:
+            import time as _time
+            subprocess.Popen(["cmd", "/c", "start", "", "winword", "/n"], shell=False)
+            _time.sleep(5)
+            # Check if we landed on start screen and click Blank document
             try:
-                os.startfile("winword")
-                import time
-                time.sleep(3)
-                return "Word is opening. You may need to click 'Blank document' on the start screen."
+                import pywinauto
+                app = pywinauto.Application(backend="uia").connect(title_re=".*Word.*", timeout=10)
+                window = app.top_window()
+                title = window.window_text()
+                if "start" in title.lower() or not any(
+                    kw in title.lower() for kw in ["document", "doc", ".docx"]
+                ):
+                    # On start screen — click Blank document
+                    try:
+                        blank_btn = window.child_window(title="Blank document", control_type="ListItem")
+                        blank_btn.click_input()
+                        _time.sleep(2)
+                    except Exception:
+                        # Try alternative: press Escape then Ctrl+N for new doc
+                        try:
+                            window.type_keys("{ESC}")
+                            _time.sleep(1)
+                            window.type_keys("^n")
+                            _time.sleep(2)
+                        except Exception:
+                            pass
             except Exception:
-                return "I couldn't open Word. Is Microsoft Office installed?"
+                pass
+            return "Word is open with a blank document. You can start typing!"
+        except Exception:
+            return "I couldn't open Word. Is Microsoft Office installed?"
 
     # Map common app names to executables
     app_map = {
@@ -1231,10 +1263,26 @@ def type_text(window_title: str, text: str, field_name: str = "") -> str:
             return f"Please click on the '{field_name}' field in {window_title} and type: {text}"
         return f"Please type this in {window_title}: {text}"
 
+    # For Word: use win32com Selection.TypeText (most reliable — bypasses focus issues)
+    _word_names = ("word", "microsoft word", "ms word", "document")
+    if not field_name and window_title.lower().strip() in _word_names:
+        try:
+            import win32com.client
+            word = win32com.client.GetActiveObject("Word.Application")
+            word.Activate()
+            word.Selection.TypeText(text)
+            return f"Done! I typed that into Word."
+        except Exception:
+            pass  # Fall through to pywinauto
+
+    # For other apps: use pywinauto
     try:
         import pywinauto
-        app = pywinauto.Application(backend="uia").connect(title_re=f".*{window_title}.*")
+        import time as _time
+        app = pywinauto.Application(backend="uia").connect(title_re=f".*{window_title}.*", timeout=10)
         window = app.top_window()
+        window.set_focus()
+        _time.sleep(0.5)
         if field_name:
             field = window.child_window(title=field_name, control_type="Edit")
             field.set_text(text)
@@ -1244,7 +1292,7 @@ def type_text(window_title: str, text: str, field_name: str = "") -> str:
     except ImportError:
         return f"Please type '{text}' in {window_title}."
     except Exception:
-        return f"I couldn't type into {window_title}. Is the window open?"
+        return f"I couldn't type into {window_title}. Is the window open and visible?"
 
 
 @mcp.tool()
@@ -1294,6 +1342,54 @@ def save_document_as_pdf(save_path: str) -> str:
             "  Step 2: Click 'Save As'\n"
             "  Step 3: Choose 'PDF' from the file type dropdown\n"
             "  Step 4: Click 'Save'"
+        )
+
+
+@mcp.tool()
+def save_document_as_word(save_path: str) -> str:
+    """Save the currently open Word document as a Word (.docx) file.
+    Use when the user wants to save their Word document to a specific location.
+    The document must already be open in Microsoft Word.
+
+    Args:
+        save_path: Full path where to save the .docx (e.g., 'C:\\Users\\grego\\Desktop\\Letter.docx')
+    """
+    if not IS_WINDOWS:
+        return (
+            "Here's how to save your document:\n\n"
+            "  Step 1: Click 'File' in the top-left corner\n"
+            "  Step 2: Click 'Save As'\n"
+            "  Step 3: Choose where to save it and click 'Save'\n\n"
+            "Your document will be saved! Let me know when you're done."
+        )
+
+    try:
+        import win32com.client
+        word = win32com.client.GetActiveObject("Word.Application")
+        doc = word.ActiveDocument
+
+        # Ensure save_path ends with .docx
+        if not save_path.lower().endswith(".docx"):
+            save_path = save_path + ".docx"
+
+        # FileFormat 16 = wdFormatDocumentDefault (.docx)
+        doc.SaveAs2(save_path, FileFormat=16)
+        return (
+            f"Done! I saved your document as a Word file.\n\n"
+            f"File: {save_path}\n\n"
+            f"Would you like me to email it to someone or save it as a PDF too?"
+        )
+    except ImportError:
+        return "I need the pywin32 package to save Word files. Let's save it manually using File > Save As."
+    except Exception as e:
+        error_msg = str(e).lower()
+        if "no active" in error_msg or "object" in error_msg:
+            return "I don't see a Word document open right now. Could you open the document you'd like to save?"
+        return (
+            "I had trouble saving the file. Let's try it manually:\n\n"
+            "  Step 1: Click 'File' in the top-left corner\n"
+            "  Step 2: Click 'Save As'\n"
+            "  Step 3: Choose where to save it and click 'Save'"
         )
 
 
@@ -1525,6 +1621,27 @@ GMAIL_USER = os.getenv("GMAIL_USER", "")
 GMAIL_APP_PASSWORD = os.getenv("GMAIL_APP_PASSWORD", "")
 GMAIL_FOLDER = os.getenv("GMAIL_FOLDER", "INBOX")
 USE_REAL_GMAIL = bool(GMAIL_USER and GMAIL_APP_PASSWORD)
+if USE_REAL_GMAIL:
+    print(f"[TechBuddy] Gmail IMAP enabled for {GMAIL_USER}, folder: {GMAIL_FOLDER}", flush=True)
+else:
+    print("[TechBuddy] Gmail not configured — using simulated inbox", flush=True)
+
+
+def _select_gmail_folder(mail, folder: str) -> bool:
+    """Try to select a Gmail IMAP folder, with fallback name formats."""
+    # IMAP requires quoting folder names with spaces
+    candidates = [f'"{folder}"', folder, f"[Gmail]/{folder}"]
+    for candidate in candidates:
+        try:
+            status, _ = mail.select(candidate)
+            if status == "OK":
+                if candidate != f'"{folder}"' and candidate != folder:
+                    print(f"[TechBuddy] Gmail folder '{folder}' failed, using '{candidate}' instead", flush=True)
+                return True
+        except Exception:
+            continue
+    print(f"[TechBuddy] Could not select Gmail folder '{folder}' (tried all formats)", flush=True)
+    return False
 
 
 def _fetch_gmail_inbox(max_emails: int = 10) -> list[dict]:
@@ -1532,10 +1649,13 @@ def _fetch_gmail_inbox(max_emails: int = 10) -> list[dict]:
     try:
         mail = imaplib.IMAP4_SSL("imap.gmail.com")
         mail.login(GMAIL_USER, GMAIL_APP_PASSWORD)
-        mail.select(GMAIL_FOLDER)
+        if not _select_gmail_folder(mail, GMAIL_FOLDER):
+            mail.logout()
+            return []
 
-        # Search for recent emails
-        status, data = mail.search(None, "ALL")
+        # Search recent emails only (3-day window to avoid >1MB crash on large mailboxes)
+        since_date = (datetime.now() - timedelta(days=1)).strftime("%d-%b-%Y")
+        status, data = mail.search(None, f"SINCE {since_date}")
         if status != "OK" or not data[0]:
             mail.logout()
             return []
@@ -1597,6 +1717,7 @@ def _fetch_gmail_inbox(max_emails: int = 10) -> list[dict]:
         mail.logout()
         return emails
     except Exception as e:
+        print(f"[TechBuddy] Gmail inbox error: {e}", flush=True)
         return []
 
 
@@ -1605,7 +1726,9 @@ def _fetch_gmail_message(email_id: int) -> dict | None:
     try:
         mail = imaplib.IMAP4_SSL("imap.gmail.com")
         mail.login(GMAIL_USER, GMAIL_APP_PASSWORD)
-        mail.select(GMAIL_FOLDER)
+        if not _select_gmail_folder(mail, GMAIL_FOLDER):
+            mail.logout()
+            return None
 
         status, data = mail.search(None, "ALL")
         if status != "OK" or not data[0]:
@@ -1727,6 +1850,7 @@ def _fetch_gmail_message(email_id: int) -> dict | None:
             "meeting_link": meeting_link,
         }
     except Exception as e:
+        print(f"[TechBuddy] Gmail message error: {e}", flush=True)
         return None
 
 
@@ -1856,28 +1980,30 @@ def check_email() -> str:
     """Check the email inbox. Shows recent emails with sender, subject, and date.
     Use when the user says "check my email" or "do I have any messages?"
     """
-    # Use real Gmail if configured, otherwise simulated inbox
+    # Use real Gmail if configured, fall back to simulated inbox if it fails
     if USE_REAL_GMAIL:
         emails = _fetch_gmail_inbox(max_emails=10)
-        if not emails:
-            return "I couldn't connect to your email right now. Let's try again in a moment."
-        unread = sum(1 for e in emails if not e["is_read"])
-        lines = [f"You have {len(emails)} emails ({unread} unread):\n"]
-        for e in emails:
-            status = "NEW" if not e["is_read"] else "READ"
-            scan_text = f"{e['from']} {e['subject']}"
-            scan = _scan_for_scam(scan_text)
-            warning = " ⚠️ SUSPICIOUS" if scan["risk"] != "SAFE" else ""
-            sender = e["from"].split("<")[0].strip()
-            try:
-                dt = datetime.strptime(e["date"], "%B %d, %Y at %I:%M %p")
-                short_date = dt.strftime("%b %d, %I:%M %p")
-            except ValueError:
-                short_date = e["date"]
-            lines.append(f"{e['id']}. [{status}] {sender} — \"{e['subject']}\" ({short_date}){warning}")
-        return "\n".join(lines)
+        if emails:
+            unread = sum(1 for e in emails if not e["is_read"])
+            lines = [f"You have {len(emails)} emails ({unread} unread):\n"]
+            for e in emails:
+                status = "NEW" if not e["is_read"] else "READ"
+                scan_text = f"{e['from']} {e['subject']}"
+                scan = _scan_for_scam(scan_text)
+                warning = " ⚠️ SUSPICIOUS" if scan["risk"] != "SAFE" else ""
+                sender = e["from"].split("<")[0].strip()
+                try:
+                    dt = datetime.strptime(e["date"], "%B %d, %Y at %I:%M %p")
+                    short_date = dt.strftime("%b %d, %I:%M %p")
+                except ValueError:
+                    short_date = e["date"]
+                lines.append(f"{e['id']}. [{status}] {sender} — \"{e['subject']}\" ({short_date}){warning}")
+            return "\n".join(lines)
+        # Gmail failed — report it clearly, don't hide behind simulation
+        print("[TechBuddy] Gmail failed — NOT falling back to simulated inbox", flush=True)
+        return "I had trouble connecting to your email right now. Let me try again in a moment."
 
-    # Simulated inbox fallback
+    # Simulated inbox — ONLY used when USE_REAL_GMAIL is False
     active = [e for e in SIMULATED_INBOX if e["id"] not in _deleted_ids]
 
     if not active:
@@ -1912,12 +2038,16 @@ def read_email(email_id: int) -> str:
     Args:
         email_id: The number of the email to read (from the inbox list)
     """
-    # Use real Gmail if configured
+    # Use real Gmail if configured, fall back to simulated if it fails
+    email = None
     if USE_REAL_GMAIL:
         email = _fetch_gmail_message(email_id)
         if not email:
-            return f"I can't find email #{email_id}. Try checking your inbox first to see what's there."
-    else:
+            print(f"[TechBuddy] Gmail message #{email_id} failed", flush=True)
+            return f"I had trouble reading that email. Could you try checking your inbox again?"
+
+    # Simulated inbox — ONLY used when USE_REAL_GMAIL is False
+    if not email:
         if email_id in _deleted_ids:
             return "That email was already deleted."
         email = next((e for e in SIMULATED_INBOX if e["id"] == email_id), None)
@@ -1934,7 +2064,7 @@ def read_email(email_id: int) -> str:
 
     # Prepend scam warning if risky
     if scan["risk"] == "DANGEROUS":
-        lines.append("⛔ DANGER — This email has multiple scam indicators!")
+        lines.append("🚨 DANGER — THIS IS A SCAM 🚨")
         lines.append("Do NOT click links, send money, or share personal information.")
         lines.append("")
         # List the specific flags found
@@ -1967,9 +2097,9 @@ def read_email(email_id: int) -> str:
             lines.append("")
         # Always include elder fraud hotline
         fbi = KNOWN_LEGITIMATE_CONTACTS["fbi"]
-        lines.append(f"To report scams, call the {fbi['name']}: {fbi['phone']}")
+        lines.append(f"FBI Elder Fraud Hotline: {fbi['phone']}")
         lines.append("")
-        lines.append("TIP: Ask me to \"analyze this email for scams\" for a detailed safety check.")
+        lines.append("TIP: Ask me to delete this email.")
         lines.append("")
         lines.append("--- EMAIL BELOW (read with caution) ---\n")
     elif scan["risk"] == "SUSPICIOUS":

@@ -2,7 +2,11 @@
 import sys
 from pathlib import Path
 
+import pytest
+
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
+from mcp_servers.screen_dispatch import IS_WINDOWS
 
 from frontend.app import execute_tool, serialize_content, _extract_tool_thinking, _strip_tool_thinking, _build_system_prompt
 
@@ -55,6 +59,7 @@ def test_serialize_thinking_block():
     assert result == [{"type": "thinking", "thinking": "Let me reason about this..."}]
 
 
+@pytest.mark.skipif(IS_WINDOWS, reason="Returns image data on Windows")
 def test_execute_tool_read_my_screen_non_windows():
     """On non-Windows (WSL/Linux), read_my_screen returns a helpful string."""
     result = execute_tool("read_my_screen", {})

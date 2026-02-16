@@ -4,6 +4,9 @@
 Runs after any Write or Edit tool call. Scans the file content for
 common elderly-accessibility issues. Warns but does not block (exit 0).
 Returns JSON on stdout with warnings if any found.
+
+Author: Gregory E. Schwartz
+Date:   February 2026
 """
 import json
 import sys

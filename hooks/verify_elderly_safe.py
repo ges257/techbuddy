@@ -4,6 +4,9 @@
 Runs when Claude Code stops working on a task. Checks that nothing
 dangerous was left incomplete (unsent drafts, open sensitive files, etc.).
 Returns JSON on stdout. Exit 0 = OK, Exit 2 = block stop (force review).
+
+Author: Gregory E. Schwartz
+Date:   February 2026
 """
 import json
 import sys

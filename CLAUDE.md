@@ -5,11 +5,12 @@ AI chat assistant helping elderly people use their computer through natural conv
 
 ## Architecture
 - Frontend: Flask chat window (big text, voice via Web Speech API, TTS via Kokoro on WSL port 5050 with browser fallback)
-- Backend: Claude API (Opus 4.6) with extended thinking + prompt caching, 34 tools via direct tool-use loop (up to 10 rounds)
-- Dispatch layer in `mcp_servers/screen_dispatch.py`: 34 tools with tiered fallback: win32com (Tier 1) → pywinauto (Tier 2) → existing MCP (Tier 3) → Claude Vision (Tier 4, read_my_screen captures screenshots)
+- Backend: Claude API (Opus 4.6) with extended thinking + prompt caching, 35 tools via direct tool-use loop (up to 10 rounds)
+- Dispatch layer in `mcp_servers/screen_dispatch.py`: 35 tools with tiered fallback: win32com (Tier 1) → pywinauto (Tier 2) → existing MCP (Tier 3) → Claude Vision (Tier 4, read_my_screen captures screenshots)
 - iOS Phone Control: `capture_phone_screen()`, `tap_phone_screen()`, `open_phone_app()` — via MacinCloud iOS Simulator + Cloudflare Tunnel. Mac Flask server at `PHONE_SERVER_URL` runs xcrun simctl commands.
 - System Troubleshooting: `check_system_health()` (memory/disk/CPU), `fix_frozen_program()` (kill stuck apps w/ confirm), `check_internet()` (ping + WiFi diagnostics) — all via PowerShell
 - Smart Document Saving: `smart_save_document()` auto-names files with date/time stamp, saves to `Documents/TechBuddy Saved/`
+- Save as Word: `save_document_as_word()` saves current Word doc as .docx to a specified path
 - Proactive Troubleshooting: system prompt instructs Claude to offer screen reading when user seems confused + `verify_screen_step()` tool verifies steps were completed via screenshot
 - Web Search: DuckDuckGo search (no API key) via `search_web()` tool + `_web_verify_scam()` auto-verification in scam analysis
 - Date Awareness: `_build_system_prompt()` injects today's date into system prompt
@@ -18,6 +19,9 @@ AI chat assistant helping elderly people use their computer through natural conv
 - Extended Thinking: `thinking={"type": "adaptive"}` on main loop and scam analysis inner call
 - Prompt Caching: `cache_control: {"type": "ephemeral"}` on system message for faster repeat interactions
 - Vision: `read_my_screen()` captures screenshot via PIL.ImageGrab, returns base64 to Claude Vision for screen analysis
+- Real Gmail IMAP: `check_email()` and `read_email()` connect via imaplib with app password. Folder `"Tech Buddy Demo"` (IMAP name for `label:tech-buddy-demo`). `SINCE` date limit prevents >1MB crash. No simulated fallback when Gmail is configured — returns error instead. Simulated inbox only used when `USE_REAL_GMAIL=False`.
+- Session Cookie: `_strip_image_data()` replaces base64 screenshots with `[screenshot taken]` to prevent Flask cookie overflow
+- Word Typing: `type_text()` uses win32com `Selection.TypeText()` for Word documents (bypasses pywinauto focus issues)
 - Thinking trace UI: collapsible "See what I was considering..." section under assistant messages
 - Hooks in `.claude/settings.json`: PreToolUse (validate sends), PostToolUse (a11y check), SessionStart (git status + TODO), Stop (safety verify)
 - 5 subagent configs in `.claude/agents/` (for Claude Code context, not runtime delegation)
@@ -42,7 +46,7 @@ AI chat assistant helping elderly people use their computer through natural conv
 ## Commands
 - Run frontend: `cd ~/techbuddy && venv/bin/python frontend/app.py` → http://localhost:5000
 - Run on Windows: `cd C:\Users\grego\techbuddy && venv\Scripts\python frontend\app.py`
-- Test: `cd ~/techbuddy && venv/bin/pytest tests/ -v` (136/136 passing)
+- Test: `cd ~/techbuddy && venv/bin/pytest tests/ -v` (139 passed, 4 skipped)
 - iOS Simulator demo apps (working): settings, messages, safari, photos, calendar, maps
 - iOS Simulator apps NOT available: mail, phone, camera, notes
 - Lint: `ruff check .`
@@ -60,8 +64,12 @@ AI chat assistant helping elderly people use their computer through natural conv
 - Notes directory: `~/TechBuddy Notes/` (Windows: `C:\Users\grego\TechBuddy Notes\`); on WSL uses WIN_HOME
 - Web search: duckduckgo_search library renamed to ddgs (warning is cosmetic, works fine)
 - WSL path detection: `IS_WSL` flag auto-detects, `WIN_HOME` points to `/mnt/c/Users/grego/`
-- Simulated inbox has 6 emails with attachments and meeting links — email #5 is a scam for demo
+- Simulated inbox has 6 emails with attachments and meeting links — email #5 is a scam for demo (only active when USE_REAL_GMAIL=False)
+- Real Gmail: IMAP folder name is `"Tech Buddy Demo"` (with spaces, quoted). Gmail search label `label:tech-buddy-demo` auto-converts to IMAP folder `Tech Buddy Demo`. imaplib has known bug (cpython #90378) with spaces — must quote folder name. SEARCH limited to SINCE (yesterday) to avoid >1MB imaplib crash.
 - Real Zoom PMI: 367 817 4163 (in Dr. Johnson email #3)
+- Gmail .env vars: `GMAIL_USER`, `GMAIL_APP_PASSWORD`, `GMAIL_FOLDER=Tech Buddy Demo` — only set on Windows .env, NOT WSL (WSL tests use simulated inbox)
+- type_text for Word: win32com `Selection.TypeText()` preferred over pywinauto for Word windows — more reliable cursor focus
+- All Gmail print statements use `flush=True` for Flask console visibility
 
 ## When Compacting
 Preserve: modified files list, current module being worked on, which subagents are done vs pending, the tiered fallback architecture, accessibility standards.

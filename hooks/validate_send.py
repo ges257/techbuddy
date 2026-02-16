@@ -4,6 +4,9 @@
 Receives JSON on stdin with tool_name and tool_input.
 Exit 0 = allow, Exit 2 = block.
 Returns JSON on stdout with optional 'message' to show user.
+
+Author: Gregory E. Schwartz
+Date:   February 2026
 """
 import json
 import sys

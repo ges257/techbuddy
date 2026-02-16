@@ -1137,7 +1137,7 @@
             speakText('Your ' + msg.from_relationship + ' ' + msg.from_name + ' sent a message. ' + msg.result);
         }
 
-        // Poll for family messages every 3 seconds
+        // Poll for family messages every 1.5 seconds
         setInterval(async function() {
             try {
                 const res = await fetch('/family/messages');
@@ -1148,7 +1148,7 @@
             } catch (e) {
                 // Silently ignore polling errors
             }
-        }, 3000);
+        }, 1500);
 
         // Focus input on load
         inputEl.focus();

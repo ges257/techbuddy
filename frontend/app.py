@@ -1,6 +1,19 @@
+"""app.py -- TechBuddy Flask chat server and Claude API integration.
+
+Routes user messages through Claude Opus 4.6 with 35 tools, extended
+thinking, prompt caching, and Family SMS Remote Control. Handles
+conversation history, tool dispatch, scam detection display, and
+server-side session management.
+
+Author: Gregory E. Schwartz
+Event:  Anthropic's Built with Opus 4.6: a Claude Code Hackathon
+Date:   February 2026
+"""
 import os
 import re
 import sys
+import threading
+import uuid
 from datetime import datetime
 from pathlib import Path
 
@@ -28,6 +41,7 @@ from mcp_servers.screen_dispatch import (
     click_button,
     type_text,
     save_document_as_pdf,
+    save_document_as_word,
     describe_screen_action,
     read_my_screen,
     verify_screen_step,
@@ -81,7 +95,11 @@ FAMILY_CONTACTS = {
     },
 }
 
+# Server-side conversation history (avoids Flask 4KB cookie limit)
+_conversation_histories = {}
+
 # In-memory queues for family SMS (demo-friendly, no database needed)
+_family_msg_lock = threading.Lock()
 _pending_family_messages = []
 _family_sms_log = []
 
@@ -106,6 +124,7 @@ CAPABILITIES (use the tools provided):
 - List folders: use list_folder to show what's in a folder
 - Print: use print_document to send something to the printer, troubleshoot_printer to diagnose printer problems
 - Save as PDF: use save_document_as_pdf to save the open Word document as a PDF
+- Save as Word: use save_document_as_word to save the open Word document as a .docx file
 - Click buttons: use click_button to press buttons in apps (Windows)
 - Type text: use type_text to fill in fields in apps (Windows)
 - Step-by-step help: use describe_screen_action for Zoom, email, etc.
@@ -179,6 +198,10 @@ RULES:
 - Never use jargon. Never show error codes or technical messages.
 - Use warm greetings: "Hi there!" not "Hello, how may I assist you today?"
 - USE YOUR TOOLS when the user asks for help with files, printing, or apps. Don't just describe — actually do it.
+
+EMAIL DISPLAY RULES (MANDATORY — do NOT rephrase):
+- When read_email returns text starting with "DANGER", you MUST copy the ENTIRE warning section VERBATIM into your response — from "DANGER" through the "TIP:" line. This includes: the DANGER label, every scam flag bullet, the FBI Elder Fraud Hotline number, and the TIP line. Do NOT summarize, soften, or reword ANY part of it. Show it exactly as the tool returned it, then add the email content below.
+- When emails contain meeting links (Zoom, Google Meet, Teams) or meeting IDs, ALWAYS include the FULL URL or meeting ID number in your response. For example: "Your Zoom link is https://zoom.us/j/3678174163" — never just say "there's a video call link" without the actual link.
 """
 
 
@@ -285,6 +308,17 @@ TOOLS = [
             "type": "object",
             "properties": {
                 "save_path": {"type": "string", "description": "Full path where to save the PDF (e.g., 'C:\\Users\\grego\\Desktop\\Letter.pdf')"},
+            },
+            "required": ["save_path"],
+        },
+    },
+    {
+        "name": "save_document_as_word",
+        "description": "Save the currently open Word document as a Word (.docx) file. The document must already be open in Word. Use when the user wants to save their document as a Word file.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "save_path": {"type": "string", "description": "Full path where to save the .docx (e.g., 'C:\\Users\\grego\\Desktop\\Letter.docx')"},
             },
             "required": ["save_path"],
         },
@@ -593,6 +627,7 @@ TOOL_FUNCTIONS = {
     "click_button": click_button,
     "type_text": type_text,
     "save_document_as_pdf": save_document_as_pdf,
+    "save_document_as_word": save_document_as_word,
     "describe_screen_action": describe_screen_action,
     "read_my_screen": read_my_screen,
     "verify_screen_step": verify_screen_step,
@@ -666,12 +701,39 @@ def _strip_tool_thinking(text: str) -> str:
     return re.sub(r'\[THINKING_TRACE\].*?\[/THINKING_TRACE\]', '', text, flags=re.DOTALL).strip()
 
 
+def _strip_image_data(content):
+    """Strip base64 image data from message content to prevent cookie overflow."""
+    if isinstance(content, str):
+        return content
+    if isinstance(content, list):
+        stripped = []
+        for block in content:
+            if isinstance(block, dict):
+                if block.get("type") == "image":
+                    stripped.append({"type": "text", "text": "[screenshot taken]"})
+                elif block.get("type") == "tool_result":
+                    inner = block.get("content")
+                    stripped.append({**block, "content": _strip_image_data(inner)})
+                else:
+                    stripped.append(block)
+            else:
+                stripped.append(block)
+        return stripped
+    return content
+
+
 def _compact_history(history: list) -> list:
     """Compact history to fit in session cookie (~4KB limit).
 
     Keeps full detail for the latest exchange (so tool-use pairs stay valid).
     Strips thinking/tool blocks from older messages, keeping only text.
+    Always strips base64 image data to prevent cookie overflow.
     """
+    history = [
+        {**msg, "content": _strip_image_data(msg.get("content"))}
+        for msg in history
+    ]
+
     if len(history) <= 4:
         return history
 
@@ -735,25 +797,20 @@ def call_claude(history: list) -> tuple[str, str, list]:
             messages=history,
         )
 
-        # Serialize content blocks for session storage
         assistant_content = response.content
         serialized = serialize_content(assistant_content)
 
-        # Add assistant message to history (serialized for JSON)
         history.append({"role": "assistant", "content": serialized})
 
-        # Check if Claude wants to use tools
         tool_uses = [b for b in assistant_content if b.type == "tool_use"]
 
         if not tool_uses:
-            # No tools — extract text and thinking, then return
             text_blocks = [b.text for b in assistant_content if b.type == "text"]
             thinking_blocks = [b.thinking for b in assistant_content if b.type == "thinking"]
             reply_text = " ".join(text_blocks) if text_blocks else "Done!"
             thinking_text = "\n".join(thinking_blocks) if thinking_blocks else ""
             return reply_text, thinking_text, history
 
-        # Execute each tool and build tool results
         tool_results = []
         for tool_use in tool_uses:
             result = execute_tool(tool_use.name, tool_use.input)
@@ -772,16 +829,16 @@ def call_claude(history: list) -> tuple[str, str, list]:
                     "content": result,
                 })
 
-        # Feed results back to Claude
         history.append({"role": "user", "content": tool_results})
 
-    # If we hit max rounds, return what we have
     return "I'm still working on that. Could you tell me more about what you need?", "", history
 
 
 @app.route("/")
 def index():
-    session["history"] = []
+    sid = str(uuid.uuid4())
+    session["sid"] = sid
+    _conversation_histories[sid] = []
     return render_template("chat.html")
 
 
@@ -792,8 +849,13 @@ def chat():
     if not user_message:
         return jsonify({"reply": "I didn't catch that. Could you say it again?"})
 
-    # Retrieve or init conversation history
-    history = session.get("history", [])
+    # Retrieve or init conversation history (server-side, not in cookie)
+    sid = session.get("sid")
+    if not sid or sid not in _conversation_histories:
+        sid = str(uuid.uuid4())
+        session["sid"] = sid
+        _conversation_histories[sid] = []
+    history = _conversation_histories[sid]
     history.append({"role": "user", "content": user_message})
 
     thinking_text = ""
@@ -813,7 +875,7 @@ def chat():
         if not thinking_text:
             thinking_text = tool_thinking
 
-    session["history"] = _compact_history(history)
+    _conversation_histories[sid] = _compact_history(history)
 
     response_data = {"reply": assistant_text}
     if thinking_text:
@@ -876,20 +938,26 @@ def process_family_sms(contact: dict, message: str) -> str:
         "timestamp": datetime.now().isoformat(),
     })
 
-    # Push to elderly person's chat window
-    _pending_family_messages.append({
-        "from_name": name,
-        "from_relationship": relationship,
-        "original_message": message,
-        "result": assistant_text,
-    })
+    # Push to elderly person's chat window (thread-safe)
+    with _family_msg_lock:
+        _pending_family_messages.append({
+            "from_name": name,
+            "from_relationship": relationship,
+            "original_message": message,
+            "result": assistant_text,
+        })
 
     return assistant_text
 
 
 @app.route("/sms/simulate", methods=["POST"])
 def sms_simulate():
-    """Simulated SMS endpoint for demo mode — bypasses Twilio entirely."""
+    """Simulated SMS endpoint for demo mode — bypasses Twilio entirely.
+
+    Returns immediately with an acknowledgment while processing in a
+    background thread.  The result appears in the elderly user's chat
+    via the /family/messages polling endpoint.
+    """
     data = request.get_json()
     from_number = data.get("from_number", "")
     body = data.get("message", "").strip()
@@ -904,13 +972,28 @@ def sms_simulate():
             "error": True,
         })
 
-    reply_text = process_family_sms(contact, body)
+    # Quick permission check (instant — no Claude needed)
+    if any(kw in body.lower() for kw in DESTRUCTIVE_KEYWORDS):
+        if not contact.get("can_delete", False):
+            return jsonify({
+                "reply": (
+                    f"Hi {contact['name']}, I can't do that through SMS "
+                    f"for safety reasons. Please help your mom in person "
+                    f"or ask her directly."
+                ),
+            })
 
-    # Truncate for SMS realism (1600 char Twilio limit)
-    if len(reply_text) > 1500:
-        reply_text = reply_text[:1497] + "..."
+    # Process in background thread — return immediately
+    def _process():
+        process_family_sms(contact, body)
 
-    return jsonify({"reply": reply_text})
+    threading.Thread(target=_process, daemon=True).start()
+    return jsonify({
+        "reply": (
+            f"Got it! I'm helping your mom with that now. "
+            f"She'll see it on her screen shortly."
+        ),
+    })
 
 
 @app.route("/sms/incoming", methods=["POST"])
@@ -951,8 +1034,9 @@ def sms_incoming():
 @app.route("/family/messages", methods=["GET"])
 def family_messages():
     """Polling endpoint — returns pending family messages for the chat UI."""
-    messages = list(_pending_family_messages)
-    _pending_family_messages.clear()
+    with _family_msg_lock:
+        messages = list(_pending_family_messages)
+        _pending_family_messages.clear()
     return jsonify({"messages": messages})
 
 

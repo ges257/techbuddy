@@ -2,6 +2,9 @@
 import os
 import sys
 from pathlib import Path
+from unittest.mock import patch
+
+import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
@@ -14,6 +17,7 @@ from mcp_servers.screen_dispatch import (
     describe_screen_action,
     read_my_screen,
     set_anthropic_client,
+    IS_WINDOWS,
     check_email,
     read_email,
     send_email,
@@ -70,16 +74,19 @@ def test_print_too_many_copies():
 
 # --- Email tools ---
 
+@patch("mcp_servers.screen_dispatch.USE_REAL_GMAIL", False)
 def test_check_email_returns_list():
     result = check_email()
     assert "email" in result.lower()
     assert "Sarah" in result or "CVS" in result
 
+@patch("mcp_servers.screen_dispatch.USE_REAL_GMAIL", False)
 def test_read_email_valid():
     result = read_email(1)
     assert "Sarah" in result
     assert "pot roast" in result.lower() or "dinner" in result.lower()
 
+@patch("mcp_servers.screen_dispatch.USE_REAL_GMAIL", False)
 def test_read_email_invalid():
     result = read_email(999)
     assert "can't find" in result.lower()
@@ -88,10 +95,12 @@ def test_send_email_success():
     result = send_email("daughter@gmail.com", "Hi sweetie", "Just wanted to say hello!")
     assert "sent" in result.lower()
 
+@patch("mcp_servers.screen_dispatch.USE_REAL_GMAIL", False)
 def test_delete_email_valid():
     result = delete_email(6)
     assert "deleted" in result.lower() or "done" in result.lower()
 
+@patch("mcp_servers.screen_dispatch.USE_REAL_GMAIL", False)
 def test_inbox_has_scam():
     result = read_email(5)
     assert "act now" in result.lower() or "prize" in result.lower() or "social security" in result.lower()
@@ -110,6 +119,7 @@ def test_share_photo_missing():
 
 # --- Video call tools ---
 
+@patch("mcp_servers.screen_dispatch.USE_REAL_GMAIL", False)
 def test_check_meeting_links():
     result = check_for_meeting_links()
     # Inbox has no meeting links in our simulated data, so should say none found
@@ -140,14 +150,17 @@ def test_troubleshoot_printer_returns_checklist():
 
 # --- Email attachments ---
 
+@patch("mcp_servers.screen_dispatch.USE_REAL_GMAIL", False)
 def test_read_email_shows_attachments():
     result = read_email(3)
     assert "Appointment_Details.pdf" in result
 
+@patch("mcp_servers.screen_dispatch.USE_REAL_GMAIL", False)
 def test_read_email_shows_meeting_link():
     result = read_email(3)
     assert "zoom.us" in result
 
+@patch("mcp_servers.screen_dispatch.USE_REAL_GMAIL", False)
 def test_download_attachment_valid():
     result = download_attachment(3, "Appointment_Details.pdf")
     assert "downloaded" in result.lower()
@@ -245,16 +258,19 @@ def test_analyze_scam_grandparent():
     assert "danger" in result.lower() or "scam" in result.lower()
     assert "grandparent" in result.lower()
 
+@patch("mcp_servers.screen_dispatch.USE_REAL_GMAIL", False)
 def test_read_email_scam_shows_warning():
     result = read_email(5)  # Prize scam email
     assert "DANGER" in result or "WARNING" in result
     assert "prize" in result.lower() or "congratulations" in result.lower()
 
+@patch("mcp_servers.screen_dispatch.USE_REAL_GMAIL", False)
 def test_read_email_safe_no_warning():
     result = read_email(1)  # Sarah's dinner email
     assert "SCAM WARNING" not in result
     assert "CAUTION" not in result
 
+@patch("mcp_servers.screen_dispatch.USE_REAL_GMAIL", False)
 def test_check_email_flags_suspicious():
     result = check_email()
     assert "SUSPICIOUS" in result  # Prize email should be flagged
@@ -271,6 +287,7 @@ def test_join_trusted_link():
 
 # --- Vision + Extended Thinking tests ---
 
+@pytest.mark.skipif(IS_WINDOWS, reason="Returns image data on Windows")
 def test_read_my_screen_non_windows():
     """On non-Windows, read_my_screen returns a helpful string."""
     result = read_my_screen()
