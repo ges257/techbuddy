@@ -1,0 +1,7 @@
+flask>=3.0
+anthropic>=0.40
+python-dotenv>=1.0
+ddgs>=9.0
+Pillow>=10.0
+pywinauto>=0.6.8;sys_platform=='win32'
+pywin32>=306;sys_platform=='win32'
