@@ -1,4 +1,6 @@
-# Learnings & Trade-offs
+<p align="center">
+  <img src="https://capsule-render.vercel.app/api?type=waving&color=FFCCBC&fontColor=3E2723&height=180&section=header&text=Learnings%20%26%20Trade-offs&fontSize=45&fontAlignY=35&descAlignY=55&desc=Insights%20from%20Building%20with%20Opus%204.6&descSize=16&animation=fadeIn" width="100%"/>
+</p>
 
 > What we learned about building with Claude Opus 4.6 for elderly users — the insights that shaped the architecture, the trade-offs that defined the product, and the edge cases that kept us honest.
 

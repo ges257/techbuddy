@@ -1,4 +1,6 @@
-# System Architecture
+<p align="center">
+  <img src="https://capsule-render.vercel.app/api?type=waving&color=FFCCBC&fontColor=3E2723&height=180&section=header&text=System%20Architecture&fontSize=45&fontAlignY=35&descAlignY=55&desc=Technical%20Design%20%26%20System%20Flow&descSize=16&animation=fadeIn" width="100%"/>
+</p>
 
 > Technical design and system flow for TechBuddy — an AI companion that helps elderly people use their computer through natural conversation, powered by Claude Opus 4.6.
 

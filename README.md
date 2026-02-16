@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://capsule-render.vercel.app/api?type=waving&color=FFCCBC&fontColor=3E2723&height=250&section=header&text=TechBuddy&fontSize=60&descAlignY=78&desc=Claude%20Code%20for%20your%20elderly%20parents&descSize=20&animation=fadeIn" width="100%"/>
+  <img src="https://capsule-render.vercel.app/api?type=waving&color=FFCCBC&fontColor=3E2723&height=250&section=header&text=TechBuddy&fontSize=60&fontAlignY=35&descAlignY=50&desc=Claude%20Code%20for%20your%20elderly%20parents&descSize=20&animation=fadeIn" width="100%"/>
 </p>
 
 <p align="center">

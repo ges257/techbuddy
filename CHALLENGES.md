@@ -1,4 +1,6 @@
-# Challenges & Problem-Solving
+<p align="center">
+  <img src="https://capsule-render.vercel.app/api?type=waving&color=FFCCBC&fontColor=3E2723&height=180&section=header&text=Challenges&fontSize=45&fontAlignY=35&descAlignY=55&desc=8%20Real%20Problems%2C%20Solved&descSize=16&animation=fadeIn" width="100%"/>
+</p>
 
 > Eight real problems from six days of building TechBuddy. Each one looked simple on the surface. None of them were.
 
