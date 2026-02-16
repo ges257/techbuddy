@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://capsule-render.vercel.app/api?type=waving&amp;color=FFCCBC&amp;fontColor=3E2723&amp;height=180&amp;section=header&amp;text=System%20Architecture&amp;fontSize=45&amp;fontAlignY=35&amp;descAlignY=55&amp;desc=Technical%20Design%20%26%20System%20Flow&amp;descSize=16&amp;animation=fadeIn" width="100%"/>
+  <img src="https://capsule-render.vercel.app/api?type=waving&amp;color=FFCCBC&amp;fontColor=3E2723&amp;height=180&amp;section=header&amp;text=System%20Architecture&amp;fontSize=45&amp;fontAlignY=35&amp;descAlignY=55&amp;desc=Technical%20Design%20and%20System%20Flow&amp;descSize=16&amp;animation=fadeIn" width="100%"/>
 </p>
 
 > Technical design and system flow for TechBuddy — an AI companion that helps elderly people use their computer through natural conversation, powered by Claude Opus 4.6.

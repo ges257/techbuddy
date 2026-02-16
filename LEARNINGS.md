@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://capsule-render.vercel.app/api?type=waving&amp;color=FFCCBC&amp;fontColor=3E2723&amp;height=180&amp;section=header&amp;text=Learnings%20%26%20Trade-offs&amp;fontSize=45&amp;fontAlignY=35&amp;descAlignY=55&amp;desc=Insights%20from%20Building%20with%20Opus%204.6&amp;descSize=16&amp;animation=fadeIn" width="100%"/>
+  <img src="https://capsule-render.vercel.app/api?type=waving&amp;color=FFCCBC&amp;fontColor=3E2723&amp;height=180&amp;section=header&amp;text=Learnings%20and%20Trade-offs&amp;fontSize=45&amp;fontAlignY=35&amp;descAlignY=55&amp;desc=Insights%20from%20Building%20with%20Opus%204.6&amp;descSize=16&amp;animation=fadeIn" width="100%"/>
 </p>
 
 > What we learned about building with Claude Opus 4.6 for elderly users — the insights that shaped the architecture, the trade-offs that defined the product, and the edge cases that kept us honest.
