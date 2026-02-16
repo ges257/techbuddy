@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://capsule-render.vercel.app/api?type=waving&color=FFCCBC&fontColor=3E2723&height=180&section=header&text=CLAUDE.md&fontSize=45&fontAlignY=35&descAlignY=55&desc=The%20Project%20Blueprint&descSize=16&animation=fadeIn" width="100%"/>
+  <img src="https://capsule-render.vercel.app/api?type=waving&amp;color=FFCCBC&amp;fontColor=3E2723&amp;height=180&amp;section=header&amp;text=CLAUDE.md&amp;fontSize=45&amp;fontAlignY=35&amp;descAlignY=55&amp;desc=The%20Project%20Blueprint&amp;descSize=16&amp;animation=fadeIn" width="100%"/>
 </p>
 
 > This file is loaded automatically by Claude Code at the start of every session. It defines the project's architecture, accessibility standards, coding conventions, and hard-won gotchas. It's the project's DNA.
@@ -93,5 +93,5 @@ Preserve: modified files list, current module being worked on, which subagents a
 </p>
 
 <p align="center">
-  <img src="https://capsule-render.vercel.app/api?type=waving&color=FFCCBC&height=100&section=footer" width="100%"/>
+  <img src="https://capsule-render.vercel.app/api?type=waving&amp;color=FFCCBC&amp;height=100&amp;section=footer" width="100%"/>
 </p>

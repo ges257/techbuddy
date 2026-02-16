@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://capsule-render.vercel.app/api?type=waving&color=FFCCBC&fontColor=3E2723&height=180&section=header&text=System%20Architecture&fontSize=45&fontAlignY=35&descAlignY=55&desc=Technical%20Design%20%26%20System%20Flow&descSize=16&animation=fadeIn" width="100%"/>
+  <img src="https://capsule-render.vercel.app/api?type=waving&amp;color=FFCCBC&amp;fontColor=3E2723&amp;height=180&amp;section=header&amp;text=System%20Architecture&amp;fontSize=45&amp;fontAlignY=35&amp;descAlignY=55&amp;desc=Technical%20Design%20%26%20System%20Flow&amp;descSize=16&amp;animation=fadeIn" width="100%"/>
 </p>
 
 > Technical design and system flow for TechBuddy — an AI companion that helps elderly people use their computer through natural conversation, powered by Claude Opus 4.6.
@@ -38,7 +38,7 @@ flowchart TB
     subgraph Dispatch ["Tool Dispatch (screen_dispatch.py)"]
         direction LR
         EMAIL["📧 Email\n(Gmail IMAP)"]
-        FILES["📁 Files &\nApps"]
+        FILES["📁 Files +\nApps"]
         SCAM["🛡️ Scam\nShield"]
         VISION["👁️ Vision\n(Desktop + iPhone)"]
         SYSTEM["🔧 System\nHealth"]

@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://capsule-render.vercel.app/api?type=waving&color=FFCCBC&fontColor=3E2723&height=250&section=header&text=TechBuddy&fontSize=60&fontAlignY=35&descAlignY=50&desc=Claude%20Code%20for%20your%20elderly%20parents&descSize=20&animation=fadeIn" width="100%"/>
+  <img src="https://capsule-render.vercel.app/api?type=waving&amp;color=FFCCBC&amp;fontColor=3E2723&amp;height=250&amp;section=header&amp;text=TechBuddy&amp;fontSize=60&amp;fontAlignY=35&amp;descAlignY=50&amp;desc=Claude%20Code%20for%20your%20elderly%20parents&amp;descSize=20&amp;animation=fadeIn" width="100%"/>
 </p>
 
 <p align="center">
@@ -7,9 +7,9 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Built_with-Claude_Opus_4.6-4CAF50?style=for-the-badge&logo=anthropic&logoColor=FFF8F0" alt="Built with Claude Opus 4.6"/>
-  <img src="https://img.shields.io/badge/Hackathon-Built_with_Opus_4.6-FFCC80?style=for-the-badge&logo=anthropic&logoColor=3E2723" alt="Built with Opus 4.6 Hackathon"/>
-  <img src="https://img.shields.io/badge/License-MIT-FFCCBC?style=for-the-badge&logoColor=3E2723" alt="MIT License"/>
+  <img src="https://img.shields.io/badge/Built_with-Claude_Opus_4.6-4CAF50?style=for-the-badge&amp;logo=anthropic&amp;logoColor=FFF8F0" alt="Built with Claude Opus 4.6"/>
+  <img src="https://img.shields.io/badge/Hackathon-Built_with_Opus_4.6-FFCC80?style=for-the-badge&amp;logo=anthropic&amp;logoColor=3E2723" alt="Built with Opus 4.6 Hackathon"/>
+  <img src="https://img.shields.io/badge/License-MIT-FFCCBC?style=for-the-badge&amp;logoColor=3E2723" alt="MIT License"/>
 </p>
 
 <p align="center">
@@ -78,7 +78,7 @@ Your mother says *"help me find that photo from Christmas."* Claude Opus 4.6 und
 
 <p align="center">
   <a href="#">
-    <img src="https://img.shields.io/badge/▶_Watch_Demo-3_min-4CAF50?style=for-the-badge&logo=youtube&logoColor=FFF8F0" alt="Watch Demo"/>
+    <img src="https://img.shields.io/badge/▶_Watch_Demo-3_min-4CAF50?style=for-the-badge&amp;logo=youtube&amp;logoColor=FFF8F0" alt="Watch Demo"/>
   </a>
 </p>
 
@@ -133,7 +133,7 @@ flowchart LR
 
 <p align="center">
   <a href="ARCHITECTURE.md">
-    <img src="https://img.shields.io/badge/Full_Architecture-Deep_Dive-4CAF50?style=flat-square&logoColor=3E2723" alt="Full Architecture"/>
+    <img src="https://img.shields.io/badge/Full_Architecture-Deep_Dive-4CAF50?style=flat-square&amp;logoColor=3E2723" alt="Full Architecture"/>
   </a>
 </p>
 
@@ -254,10 +254,10 @@ techbuddy/
 ---
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Python-3.11+-FFCCBC?style=flat-square&logo=python&logoColor=3E2723" alt="Python 3.11+"/>
-  <img src="https://img.shields.io/badge/Flask-3.0-FFCCBC?style=flat-square&logo=flask&logoColor=3E2723" alt="Flask"/>
-  <img src="https://img.shields.io/badge/Claude-Opus_4.6-4CAF50?style=flat-square&logo=anthropic&logoColor=FFF8F0" alt="Claude Opus 4.6"/>
-  <img src="https://img.shields.io/badge/License-MIT-FFCCBC?style=flat-square&logoColor=3E2723" alt="MIT"/>
+  <img src="https://img.shields.io/badge/Python-3.11+-FFCCBC?style=flat-square&amp;logo=python&amp;logoColor=3E2723" alt="Python 3.11+"/>
+  <img src="https://img.shields.io/badge/Flask-3.0-FFCCBC?style=flat-square&amp;logo=flask&amp;logoColor=3E2723" alt="Flask"/>
+  <img src="https://img.shields.io/badge/Claude-Opus_4.6-4CAF50?style=flat-square&amp;logo=anthropic&amp;logoColor=FFF8F0" alt="Claude Opus 4.6"/>
+  <img src="https://img.shields.io/badge/License-MIT-FFCCBC?style=flat-square&amp;logoColor=3E2723" alt="MIT"/>
 </p>
 
 <p align="center">
@@ -266,5 +266,5 @@ techbuddy/
 </p>
 
 <p align="center">
-  <img src="https://capsule-render.vercel.app/api?type=waving&color=FFCCBC&height=100&section=footer" width="100%"/>
+  <img src="https://capsule-render.vercel.app/api?type=waving&amp;color=FFCCBC&amp;height=100&amp;section=footer" width="100%"/>
 </p>

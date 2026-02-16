@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://capsule-render.vercel.app/api?type=waving&color=FFCCBC&fontColor=3E2723&height=180&section=header&text=Development%20Architecture&fontSize=45&fontAlignY=35&descAlignY=55&desc=How%20Claude%20Code%20Built%20TechBuddy&descSize=16&animation=fadeIn" width="100%"/>
+  <img src="https://capsule-render.vercel.app/api?type=waving&amp;color=FFCCBC&amp;fontColor=3E2723&amp;height=180&amp;section=header&amp;text=Development%20Architecture&amp;fontSize=45&amp;fontAlignY=35&amp;descAlignY=55&amp;desc=How%20Claude%20Code%20Built%20TechBuddy&amp;descSize=16&amp;animation=fadeIn" width="100%"/>
 </p>
 
 > TechBuddy was built using Claude Code as a full development partner — not just an autocomplete engine. This document shows every primitive configured, every workflow pattern applied, and every advanced technique leveraged during six days of building.
@@ -462,5 +462,5 @@ The primitives scale.
 </p>
 
 <p align="center">
-  <img src="https://capsule-render.vercel.app/api?type=waving&color=FFCCBC&height=100&section=footer" width="100%"/>
+  <img src="https://capsule-render.vercel.app/api?type=waving&amp;color=FFCCBC&amp;height=100&amp;section=footer" width="100%"/>
 </p>

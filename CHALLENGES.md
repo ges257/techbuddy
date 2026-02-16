@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://capsule-render.vercel.app/api?type=waving&color=FFCCBC&fontColor=3E2723&height=180&section=header&text=Challenges&fontSize=45&fontAlignY=35&descAlignY=55&desc=8%20Real%20Problems%2C%20Solved&descSize=16&animation=fadeIn" width="100%"/>
+  <img src="https://capsule-render.vercel.app/api?type=waving&amp;color=FFCCBC&amp;fontColor=3E2723&amp;height=180&amp;section=header&amp;text=Challenges&amp;fontSize=45&amp;fontAlignY=35&amp;descAlignY=55&amp;desc=8%20Real%20Problems%2C%20Solved&amp;descSize=16&amp;animation=fadeIn" width="100%"/>
 </p>
 
 > Eight real problems from six days of building TechBuddy. Each one looked simple on the surface. None of them were.
